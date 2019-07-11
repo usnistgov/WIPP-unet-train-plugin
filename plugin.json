@@ -1,0 +1,217 @@
+{
+  "name": "WIPP UNet CNN Training Plugin",
+  "version": "0.0.1",
+  "title": "UNet CNN Training",
+  "description": "Train a UNet CNN model",
+  "containerId": "wipp/wipp-unet-cnn-train-plugin:0.0.1",
+  "inputs": [
+
+    {
+      "name": "image_dir",
+      "type": "collection",
+      "options": {
+        "format": "tiledtiff"
+      },
+      "description": "Input images for the plugin.",
+      "required": true
+    },
+    {
+      "name": "mask_dir",
+      "type": "collection",
+      "options": {
+        "format": "tiledtiff"
+      },
+      "description": "Input masks for the plugin.",
+      "required": true
+    },
+    {
+      "name": "use_tiling",
+      "type": "boolean",
+      "description": "Controls whether or not to tile the input images for training in order to fit them into GPU memory.",
+      "required": true
+    },
+    {
+      "name": "tile_size",
+      "type": "number",
+      "description": "Tile size for tiling input images in order to fit them into GPU memory.",
+      "required": true
+    },
+    {
+      "name": "train_fraction",
+      "type": "number",
+      "description": "What fraction of the annotated images to use for training (default 0.8).",
+      "required": true
+    },
+
+
+    {
+      "name": "batch_size",
+      "type": "number",
+      "description": "How many images/tiles to use per mini-batch. The number of images used to estimate the gradient per training step.",
+      "required": true
+    },
+    {
+      "name": "number_classes",
+      "type": "number",
+      "description": "How many classes exists in the training data? Each pixel will be classified into one of N classes in the segmentation mask, what is N?",
+      "required": true
+    },
+    {
+      "name": "learning_rate",
+      "type": "number",
+      "description": "What is the learning rate for the network?",
+      "required": true
+    },
+    {
+      "name": "test_every_n_steps",
+      "type": "number",
+      "description": "How many gradient update (training) steps to take between test split evaluations. This controls how big the effective epoch is. It enables controlling the test frequency between experiments with different true epoch sizes.",
+      "required": true
+    },
+    {
+      "name": "balance_classes",
+      "type": "boolean",
+      "description": "Whether or not to sample data during training in a class balanced manner. If turned off, the data the network sees will be randomly sampled from the full training dataset.",
+      "required": true
+    },
+    {
+      "name": "use_augmentation",
+      "type": "boolean",
+      "description": "Whether or not to use data augmentation during training.",
+      "required": true
+    },
+    {
+      "name": "augmentation_reflection",
+      "type": "boolean",
+      "description": "Whether or not to use the data augmentation technique image reflection during training.",
+      "required": true
+    },
+    {
+      "name": "augmentation_rotation",
+      "type": "boolean",
+      "description": "Whether or not to use the data augmentation technique image rotation during training.",
+      "required": true
+    },
+    {
+      "name": "augmentation_jitter",
+      "type": "number",
+      "description": "The severity of jitter data augmentation [0 = None, 1 = 100% of image size]. Jitter shifts the image left-right and up-down by a percentage of the image size.",
+      "required": true
+    },
+    {
+      "name": "augmentation_scale",
+      "type": "number",
+      "description": "The severity of scale data augmentation [0 = None, 1 = 100% of image size]. Scale alters the image size by zooming in or out by a percentage of the image size.",
+      "required": true
+    },
+    {
+      "name": "augmentation_noise",
+      "type": "number",
+      "description": "The severity of noise data augmentation [0 = None, 1 = 100% of the image dynamic range]. Noise augmentation adds gaussian noise to the image as a percentage of the images dynamic range.",
+      "required": true
+    },
+    {
+      "name": "augmentation_blur_max_sigma",
+      "type": "number",
+      "description": "The max size of a gaussian blur kernel used to blur the images [0 = None]. Blur augmentation performs a gaussian smoothing of the image to blur out details. This controls how large the blur kernel is, and therefore the strength of the blurring effect.",
+      "required": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "output_dir",
+      "type": "collection",
+      "options": {
+        "format": "tiff"
+      },
+      "description": "Output data for the plugin"
+    }
+  ],
+  "ui": [
+    {
+      "key": "inputs.image_dir",
+      "title": "Image Collection: ",
+      "description": "Pick a collection..."
+    },
+    {
+      "key": "inputs.mask_dir",
+      "title": "Mask Collection: ",
+      "description": "Pick a collection..."
+    },
+    {
+      "key": "inputs.number_classes",
+      "title": "Number of Classes",
+      "description": "How many classes exists in the training data? Each pixel will be classified into one of N classes in the segmentation mask, what is N?"
+    },
+    {
+      "key": "inputs.learning_rate",
+      "title": "Learning Rate"
+    },
+    {
+      "key": "inputs.batch_size",
+      "title": "Batch Size",
+      "description": "How many images/tiles to use per mini-batch. The number of images used to estimate the gradient per training step."
+    },
+    {
+      "key": "inputs.use_tiling",
+      "title": "Tile Input Images",
+      "description": "Whether to tile images to fit them in GPU memory"
+    },
+    {
+      "key": "inputs.tile_size",
+      "title": "Tile Size",
+      "description": "What size to make the image tiles? e.g. 256"
+    },
+    {
+      "key": "inputs.train_fraction",
+      "title": "Train Fraction",
+      "description": "What fraction of the image collection to use for training, test/validation uses (1.0 - train_fraction)"
+    },
+    {
+      "key": "inputs.test_every_n_steps",
+      "title": "Test Frequency",
+      "description": "How many gradient update (training) steps to take between test split evaluations. This controls how big the effective epoch is. It enables controlling the test frequency between experiments with different true epoch sizes."
+    },
+    {
+      "key": "inputs.balance_classes",
+      "title": "Balance Classes",
+      "description": "Whether or not to sample data during training in a class balanced manner. If turned off, the data the network sees will be randomly sampled from the full training dataset."
+    },
+    {
+      "key": "inputs.use_augmentation",
+      "title": "Use Data Augmentation",
+      "description": "Whether or not to use data augmentation during training."
+    },
+    {
+      "key": "inputs.augmentation_reflection",
+      "title": "Use Reflection Augmentation",
+      "description": "Whether or not to use the data augmentation technique image reflection during training."
+    },
+    {
+      "key": "inputs.augmentation_rotation",
+      "title": "Use Rotation Augmentation",
+      "description": "Whether or not to use the data augmentation technique image rotation during training."
+    },
+    {
+      "key": "inputs.augmentation_jitter",
+      "title": "Jitter Augmentation Severity",
+      "description": "The severity of jitter data augmentation [0 = None, 1 = 100% of image size]. Jitter shifts the image left-right and up-down by a percentage of the image size."
+    },
+    {
+      "key": "inputs.augmentation_scale",
+      "title": "Scale Augmentation Severity",
+      "description": "The severity of scale data augmentation [0 = None, 1 = 100% of image size]. Scale alters the image size by zooming in or out by a percentage of the image size."
+    },
+    {
+      "key": "inputs.augmentation_noise",
+      "title": "Noise Augmentation Severity",
+      "description": "The severity of noise data augmentation [0 = None, 1 = 100% of the image dynamic range]. Noise augmentation adds gaussian noise to the image as a percentage of the images dynamic range."
+    },
+    {
+      "key": "inputs.augmentation_blur_max_sigma",
+      "title": "Blur Augmentation Max Sigma",
+      "description": "The max size of a gaussian blur kernel used to blur the images [0 = None]. Blur augmentation performs a gaussian smoothing of the image to blur out details. This controls how large the blur kernel is, and therefore the strength of the blurring effect."
+    }
+
+  ]
+}
