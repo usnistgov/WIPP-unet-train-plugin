@@ -178,29 +178,28 @@ def main():
 
     # lmdb parameters
 
-    parser.add_argument('--image_dir', dest='image_dir', type=str, help='filepath to the directory containing the images', required=True)
-    parser.add_argument('--mask_dir', dest='mask_dir', type=str, help='filepath to the directory containing the masks', required=True)
-    parser.add_argument('--use_tiling', dest='use_tiling', type=int, help='whether to use tiling when training [0 = false, 1 = true]', default=0)
-    parser.add_argument('--tile_size', dest='tile_size', type=int, default=256)
-    parser.add_argument('--train_fraction', dest='train_fraction', type=float, help='what fraction of the dataset to use for training (0.0, 1.0)', default=0.8)
+    parser.add_argument('--imageDir', dest='image_dir', type=str, help='filepath to the directory containing the images', required=True)
+    parser.add_argument('--maskDir', dest='mask_dir', type=str, help='filepath to the directory containing the masks', required=True)
+    parser.add_argument('--useTiling', dest='use_tiling', type=str, help='whether to use tiling when training [YES, NO]', default="NO")
+    parser.add_argument('--tileSize', dest='tile_size', type=int, default=256)
+    parser.add_argument('--trainFraction', dest='train_fraction', type=float, help='what fraction of the dataset to use for training (0.0, 1.0)', default=0.8)
 
     # Training parameters
-    parser.add_argument('--batch_size', dest='batch_size', type=int, help='training batch size', default=4)
-    parser.add_argument('--number_classes', dest='number_classes', type=int, default=2)
-    parser.add_argument('--learning_rate', dest='learning_rate', type=float, default=1e-4)
-    parser.add_argument('--output_dir', dest='output_dir', type=str, help='Folder where outputs will be saved (Required)', required=True)
-    parser.add_argument('--test_every_n_steps', dest='test_every_n_steps', type=int, help='number of gradient update steps to take between test epochs', default=1000)
-    parser.add_argument('--balance_classes', dest='balance_classes', type=int, help='whether to balance classes [0 = false, 1 = true]', default=0)
+    parser.add_argument('--batchSize', dest='batch_size', type=int, help='training batch size', default=4)
+    parser.add_argument('--numberClasses', dest='number_classes', type=int, default=2)
+    parser.add_argument('--learningRate', dest='learning_rate', type=float, default=1e-4)
+    parser.add_argument('--outputDir', dest='output_dir', type=str, help='Folder where outputs will be saved (Required)', required=True)
+    parser.add_argument('--testEveryNSteps', dest='test_every_n_steps', type=int, help='number of gradient update steps to take between test epochs', default=1000)
+    parser.add_argument('--balanceClasses', dest='balance_classes', type=str, help='whether to balance classes [YES, NO]', default="NO")
 
     # Augmentation parameters
-    parser.add_argument('--use_augmentation', dest='use_augmentation', type=int, help='whether to use data augmentation [0 = false, 1 = true]', default=0)
-
-    parser.add_argument('--augmentation_reflection', dest='augmentation_reflection', type=int, help='whether to use reflection data augmentation [0 = false, 1 = true]', default=1)
-    parser.add_argument('--augmentation_rotation', dest='augmentation_rotation', type=int, help='whether to use roation data augmentation [0 = false, 1 = true]', default=1)
-    parser.add_argument('--augmentation_jitter', dest='augmentation_jitter', type=float, help='jitter data augmentation severity [0 = none, 1 = 100% image size], default = 0.1 (10% image size)', default=0.1)
-    parser.add_argument('--augmentation_noise', dest='augmentation_noise', type=float, help='noise data augmentation severity as a percentage of the image dynamic range [0 = none, 1 = 100%], default = 0.02 (2% dynamic range)', default=0.02)
-    parser.add_argument('--augmentation_scale', dest='augmentation_scale', type=float, help='scale data augmentation severity as a percentage of the image size [0 = none, 1 = 100%], default = 0.1 (10% max change in image size)', default=0.1)
-    parser.add_argument('--augmentation_blur_max_sigma', dest='augmentation_blur_max_sigma', type=float, help='maximum sigma to use in a gaussian blurring kernel. Blur kernel is selected as rand(0, max)', default=2)
+    parser.add_argument('--useAugmentation', dest='use_augmentation', type=str, help='whether to use data augmentation [YES, NO]', default="NO")
+    parser.add_argument('--augmentationReflection', dest='augmentation_reflection', type=str, help='whether to use reflection data augmentation [YES, NO]', default="YES")
+    parser.add_argument('--augmentationRotation', dest='augmentation_rotation', type=str, help='whether to use roation data augmentation [YES, NO]', default="YES")
+    parser.add_argument('--augmentationJitter', dest='augmentation_jitter', type=float, help='jitter data augmentation severity [0 = none, 1 = 100% image size], default = 0.1 (10% image size)', default=0.1)
+    parser.add_argument('--augmentationNoise', dest='augmentation_noise', type=float, help='noise data augmentation severity as a percentage of the image dynamic range [0 = none, 1 = 100%], default = 0.02 (2% dynamic range)', default=0.02)
+    parser.add_argument('--augmentationScale', dest='augmentation_scale', type=float, help='scale data augmentation severity as a percentage of the image size [0 = none, 1 = 100%], default = 0.1 (10% max change in image size)', default=0.1)
+    parser.add_argument('--augmentationBlurMaxSigma', dest='augmentation_blur_max_sigma', type=float, help='maximum sigma to use in a gaussian blurring kernel. Blur kernel is selected as rand(0, max)', default=2)
 
 
     print('Arguments:')
@@ -208,6 +207,8 @@ def main():
 
     # lmdb parameters
     use_tiling = args.use_tiling
+    use_tiling = use_tiling.upper() == "YES"
+
     tile_size = args.tile_size
     image_dir = args.image_dir
     mask_dir = args.mask_dir
@@ -227,6 +228,7 @@ def main():
     learning_rate = args.learning_rate
     test_every_n_steps = args.test_every_n_steps
     balance_classes = args.balance_classes
+    balance_classes = balance_classes.upper() == "YES"
 
     print('batch_size = {}'.format(batch_size))
     print('number_classes = {}'.format(number_classes))
@@ -237,10 +239,13 @@ def main():
 
     # Augmentation parameters
     use_augmentation = args.use_augmentation
+    use_augmentation = use_augmentation.upper() == "YES"
     print('use_augmentation = {}'.format(use_augmentation))
     if use_augmentation:
         augmentation_reflection = args.augmentation_reflection
+        augmentation_reflection = augmentation_reflection.upper() == "YES"
         augmentation_rotation = args.augmentation_rotation
+        augmentation_rotation = augmentation_rotation.upper() == "YES"
         augmentation_jitter = args.augmentation_jitter
         augmentation_noise = args.augmentation_noise
         augmentation_scale = args.augmentation_scale

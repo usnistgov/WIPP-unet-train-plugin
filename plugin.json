@@ -7,7 +7,7 @@
   "inputs": [
 
     {
-      "name": "image_dir",
+      "name": "imageDir",
       "type": "collection",
       "options": {
         "format": "tiledtiff"
@@ -16,7 +16,7 @@
       "required": true
     },
     {
-      "name": "mask_dir",
+      "name": "maskDir",
       "type": "collection",
       "options": {
         "format": "tiledtiff"
@@ -25,101 +25,143 @@
       "required": true
     },
     {
-      "name": "use_tiling",
-      "type": "boolean",
+      "name": "useTiling",
+      "type": "enum",
+			"options": {
+				"values": [
+					"NO","YES"
+				]
+			},
       "description": "Controls whether or not to tile the input images for training in order to fit them into GPU memory.",
-      "required": true
+      "required": true,
+      "default": "NO"
     },
     {
-      "name": "tile_size",
+      "name": "tileSize",
       "type": "number",
       "description": "Tile size for tiling input images in order to fit them into GPU memory.",
-      "required": true
+      "required": false,
+      "default": 256
     },
     {
-      "name": "train_fraction",
+      "name": "trainFraction",
       "type": "number",
       "description": "What fraction of the annotated images to use for training (default 0.8).",
-      "required": true
+      "required": true,
+      "default": 0.8
     },
-
-
     {
-      "name": "batch_size",
+      "name": "batchSize",
       "type": "number",
       "description": "How many images/tiles to use per mini-batch. The number of images used to estimate the gradient per training step.",
-      "required": true
+      "required": true,
+      "default": 8
     },
     {
-      "name": "number_classes",
+      "name": "numberClasses",
       "type": "number",
       "description": "How many classes exists in the training data? Each pixel will be classified into one of N classes in the segmentation mask, what is N?",
-      "required": true
+      "required": true,
+      "default": 2
     },
     {
-      "name": "learning_rate",
+      "name": "learningRate",
       "type": "number",
       "description": "What is the learning rate for the network?",
-      "required": true
+      "required": true,
+      "default": 1e-4
     },
     {
-      "name": "test_every_n_steps",
+      "name": "testEveryNSteps",
       "type": "number",
       "description": "How many gradient update (training) steps to take between test split evaluations. This controls how big the effective epoch is. It enables controlling the test frequency between experiments with different true epoch sizes.",
-      "required": true
+      "required": true,
+      "default": 1000
     },
     {
-      "name": "balance_classes",
-      "type": "boolean",
+      "name": "balanceClasses",
+      "type": "enum",
+			"options": {
+				"values": [
+					"YES",
+                    "NO"
+				]
+			},
       "description": "Whether or not to sample data during training in a class balanced manner. If turned off, the data the network sees will be randomly sampled from the full training dataset.",
-      "required": true
+      "required": true,
+      "default": "YES"
     },
     {
-      "name": "use_augmentation",
-      "type": "boolean",
+      "name": "useAugmentation",
+      "type": "enum",
+			"options": {
+				"values": [
+					"YES",
+                    "NO"
+				]
+			},
       "description": "Whether or not to use data augmentation during training.",
-      "required": true
+      "required": true,
+      "default": "YES"
     },
     {
-      "name": "augmentation_reflection",
-      "type": "boolean",
+      "name": "augmentationReflection",
+      "type": "enum",
+			"options": {
+				"values": [
+					"YES",
+                    "NO"
+				]
+			},
       "description": "Whether or not to use the data augmentation technique image reflection during training.",
-      "required": true
+      "required": false,
+      "default": "YES"
     },
     {
-      "name": "augmentation_rotation",
-      "type": "boolean",
+      "name": "augmentationRotation",
+      "type": "enum",
+			"options": {
+				"values": [
+					"YES",
+                    "NO"
+				]
+			},
       "description": "Whether or not to use the data augmentation technique image rotation during training.",
-      "required": true
+      "required": false,
+      "default": "YES"
     },
     {
-      "name": "augmentation_jitter",
+      "name": "augmentationJitter",
       "type": "number",
       "description": "The severity of jitter data augmentation [0 = None, 1 = 100% of image size]. Jitter shifts the image left-right and up-down by a percentage of the image size.",
-      "required": true
+      "required": false,
+      "default": 0.1
     },
     {
-      "name": "augmentation_scale",
+      "name": "augmentationScale",
       "type": "number",
       "description": "The severity of scale data augmentation [0 = None, 1 = 100% of image size]. Scale alters the image size by zooming in or out by a percentage of the image size.",
-      "required": true
+      "required": false,
+      "default": 0.1
     },
     {
-      "name": "augmentation_noise",
+      "name": "augmentationNoise",
       "type": "number",
       "description": "The severity of noise data augmentation [0 = None, 1 = 100% of the image dynamic range]. Noise augmentation adds gaussian noise to the image as a percentage of the images dynamic range.",
-      "required": true
+      "required": false,
+      "default": 0.02
     },
     {
-      "name": "augmentation_blur_max_sigma",
+      "name": "augmentationBlurMaxSigma",
       "type": "number",
       "description": "The max size of a gaussian blur kernel used to blur the images [0 = None]. Blur augmentation performs a gaussian smoothing of the image to blur out details. This controls how large the blur kernel is, and therefore the strength of the blurring effect.",
-      "required": true
+      "required": false,
+      "default": 2
     }
   ],
   "outputs": [
     {
-      "name": "output_dir",
+      "name": "outputDir",
       "type": "collection",
       "options": {
         "format": "tiff"
@@ -129,89 +171,136 @@
   ],
   "ui": [
     {
-      "key": "inputs.image_dir",
+      "key": "inputs.imageDir",
       "title": "Image Collection: ",
       "description": "Pick a collection..."
     },
     {
-      "key": "inputs.mask_dir",
+      "key": "inputs.maskDir",
       "title": "Mask Collection: ",
       "description": "Pick a collection..."
     },
     {
-      "key": "inputs.number_classes",
-      "title": "Number of Classes",
-      "description": "How many classes exists in the training data? Each pixel will be classified into one of N classes in the segmentation mask, what is N?"
+      "key": "inputs.numberClasses",
+      "title": "Number of Classes: ",
+      "description": "How many classes exists in the training data?"
     },
     {
-      "key": "inputs.learning_rate",
-      "title": "Learning Rate"
+      "key": "inputs.learningRate",
+      "title": "Learning Rate: "
     },
     {
-      "key": "inputs.batch_size",
-      "title": "Batch Size",
-      "description": "How many images/tiles to use per mini-batch. The number of images used to estimate the gradient per training step."
+      "key": "inputs.batchSize",
+      "title": "Batch Size: ",
+      "description": "How many images/tiles to use per mini-batch?"
     },
     {
-      "key": "inputs.use_tiling",
-      "title": "Tile Input Images",
+      "key": "inputs.useTiling",
+      "title": "Tile Input Images: ",
       "description": "Whether to tile images to fit them in GPU memory"
     },
     {
-      "key": "inputs.tile_size",
-      "title": "Tile Size",
-      "description": "What size to make the image tiles? e.g. 256"
+      "key": "inputs.tileSize",
+      "title": "Tile Size: ",
+      "description": "What size to make the image tiles?",
+      "condition": "model.inputs.useTiling=='YES'"
     },
     {
-      "key": "inputs.train_fraction",
-      "title": "Train Fraction",
-      "description": "What fraction of the image collection to use for training, test/validation uses (1.0 - train_fraction)"
+      "key": "inputs.trainFraction",
+      "title": "Train Fraction: ",
+      "description": "What fraction of the image collection to use for training?"
     },
     {
-      "key": "inputs.test_every_n_steps",
-      "title": "Test Frequency",
-      "description": "How many gradient update (training) steps to take between test split evaluations. This controls how big the effective epoch is. It enables controlling the test frequency between experiments with different true epoch sizes."
+      "key": "inputs.testEveryNSteps",
+      "title": "Test Every N Steps: ",
+      "description": "How many gradient update steps to take between test evaluations."
     },
     {
-      "key": "inputs.balance_classes",
-      "title": "Balance Classes",
-      "description": "Whether or not to sample data during training in a class balanced manner. If turned off, the data the network sees will be randomly sampled from the full training dataset."
+      "key": "inputs.balanceClasses",
+      "title": "Balance Classes: ",
+      "description": "Whether or not to balance classes when sampling training data."
     },
     {
-      "key": "inputs.use_augmentation",
-      "title": "Use Data Augmentation",
+      "key": "inputs.useAugmentation",
+      "title": "Use Data Augmentation: ",
       "description": "Whether or not to use data augmentation during training."
     },
     {
-      "key": "inputs.augmentation_reflection",
-      "title": "Use Reflection Augmentation",
-      "description": "Whether or not to use the data augmentation technique image reflection during training."
+      "key": "inputs.augmentationRotation",
+      "title": "Use Rotation Augmentation: ",
+      "condition": "model.inputs.useAugmentation=='YES'"
     },
     {
-      "key": "inputs.augmentation_rotation",
-      "title": "Use Rotation Augmentation",
-      "description": "Whether or not to use the data augmentation technique image rotation during training."
+      "key": "inputs.augmentationReflection",
+      "title": "Use Reflection Augmentation: ",
+      "condition": "model.inputs.useAugmentation=='YES'"
     },
     {
-      "key": "inputs.augmentation_jitter",
-      "title": "Jitter Augmentation Severity",
-      "description": "The severity of jitter data augmentation [0 = None, 1 = 100% of image size]. Jitter shifts the image left-right and up-down by a percentage of the image size."
+      "key": "inputs.augmentationJitter",
+      "title": "Jitter Augmentation Severity: ",
+      "description": "The severity of jitter data augmentation [0 = None, 1 = 100% of image size].",
+      "condition": "model.inputs.useAugmentation=='YES'"
     },
     {
-      "key": "inputs.augmentation_scale",
-      "title": "Scale Augmentation Severity",
-      "description": "The severity of scale data augmentation [0 = None, 1 = 100% of image size]. Scale alters the image size by zooming in or out by a percentage of the image size."
+      "key": "inputs.augmentationScale",
+      "title": "Scale Augmentation Severity: ",
+      "description": "The severity of scale data augmentation [0 = None, 1 = 100% of image size].",
+      "condition": "model.inputs.useAugmentation=='YES'"
     },
     {
-      "key": "inputs.augmentation_noise",
-      "title": "Noise Augmentation Severity",
-      "description": "The severity of noise data augmentation [0 = None, 1 = 100% of the image dynamic range]. Noise augmentation adds gaussian noise to the image as a percentage of the images dynamic range."
+      "key": "inputs.augmentationNoise",
+      "title": "Noise Augmentation Severity: ",
+      "description": "The severity of noise data augmentation [0 = None, 1 = 100% of the image dynamic range].",
+      "condition": "model.inputs.useAugmentation=='YES'"
     },
     {
-      "key": "inputs.augmentation_blur_max_sigma",
-      "title": "Blur Augmentation Max Sigma",
-      "description": "The max size of a gaussian blur kernel used to blur the images [0 = None]. Blur augmentation performs a gaussian smoothing of the image to blur out details. This controls how large the blur kernel is, and therefore the strength of the blurring effect."
-    }
+      "key": "inputs.augmentationBlurMaxSigma",
+      "title": "Blur Augmentation Max Sigma: ",
+      "description": "The max size of a gaussian blur kernel used to blur the images [0 = None]. ",
+      "condition": "model.inputs.useAugmentation=='YES'"
+    },
+    {
+            "key" : "fieldsets",
+            "fieldsets": [
+                {
+                  "title": "-- Input images --",
+                  "fields": [
+                    "imageDir",
+                    "maskDir"
+                  ]
+                },
+                {
+                  "title": "-- Data Configuration --",
+                  "fields": [
+                    "useTiling",
+                    "tileSize",
+                    "numberClasses"
+                  ]
+                },
+                {
+                  "title": "-- Training Configuration --",
+                  "fields": [
+                    "trainFraction",
+                    "batchSize",
+                    "learningRate",
+                   "testEveryNSteps",
+                   "balanceClasses"
+                  ]
+                },
+                {
+                  "title": "-- Augmentation Configuration --",
+                  "fields": [
+                    "useAugmentation",
+                    "augmentationRotation",
+                    "augmentationReflection",
+                   "augmentationJitter",
+                   "augmentationScale",
+                   "augmentationNoise",
+                   "augmentationBlurMaxSigma"
+                  ]
+                }
+            ]
+        }
 
   ]
 }
