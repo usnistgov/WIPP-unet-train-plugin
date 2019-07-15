@@ -11,8 +11,6 @@ RUN mkdir -p ${EXEC_DIR} \
     && mkdir -p ${DATA_DIR}/masks \
     && mkdir -p ${DATA_DIR}/outputs
 
-# TODO maybe replace SCRATCH_DIR with ubuntu tmp directory folder
-
 RUN pip3 install lmdb scikit-image
 
 #Copy executable
