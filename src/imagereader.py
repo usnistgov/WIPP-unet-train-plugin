@@ -23,6 +23,7 @@ tf_version = tf.__version__.split('.')
 if int(tf_version[0]) != 2:
     import warnings
     warnings.warn('Codebase designed for Tensorflow 2.x.x')
+import unet_model
 
 
 def zscore_normalize(image_data):
@@ -40,11 +41,12 @@ def zscore_normalize(image_data):
     return image_data
 
 
-def augment_image(img, mask=None, rotation_flag=False, reflection_flag=False,
+def augment_image(img, mask=None, rotation_flag=0, reflection_flag=0,
                   jitter_augmentation_severity=0,  # jitter augmentation severity as a fraction of the image size
                   noise_augmentation_severity=0,  # noise augmentation as a percentage of current noise
                   scale_augmentation_severity=0,  # scale augmentation as a percentage of the image size):
-                  blur_augmentation_max_sigma=0):  # blur augmentation kernel maximum size
+                  blur_augmentation_max_sigma=0,  # blur augmentation kernel maximum size):
+                  intensity_augmentation_severity=0):  # intensity augmentation as a percentage of the current intensity
 
     img = np.asarray(img)
 
@@ -54,7 +56,7 @@ def augment_image(img, mask=None, rotation_flag=False, reflection_flag=False,
     debug_worst_possible_transformation = False # useful for debuging how bad images can get
 
     # check that the input image and mask are 2D images
-    assert len(img.shape) == 2
+    assert len(img.shape) == 2 or len(img.shape) == 3
 
     # convert input Nones to expected
     if jitter_augmentation_severity is None:
@@ -65,18 +67,21 @@ def augment_image(img, mask=None, rotation_flag=False, reflection_flag=False,
         scale_augmentation_severity = 0
     if blur_augmentation_max_sigma is None:
         blur_augmentation_max_sigma = 0
+    if intensity_augmentation_severity is None:
+        intensity_augmentation_severity = 0
 
     # confirm that severity is a float between [0,1]
     assert 0 <= jitter_augmentation_severity < 1
     assert 0 <= noise_augmentation_severity < 1
     assert 0 <= scale_augmentation_severity < 1
+    assert 0 <= intensity_augmentation_severity < 1
 
     # get the size of the input image
-    h, w = img.shape
+    h, w, c = img.shape
 
     if mask is not None:
         mask = np.asarray(mask, dtype=np.float32)
-        assert len(mask.shape) == 2
+        assert len(mask.shape) == 2 or len(mask.shape) == 3
         assert (mask.shape[0] == h and mask.shape[1] == w)
 
     # set default augmentation parameter values (which correspond to no transformation)
@@ -139,7 +144,7 @@ def augment_image(img, mask=None, rotation_flag=False, reflection_flag=False,
             sigma = min_val + (max_val - min_val) * 1
         else:
             sigma = min_val + (max_val - min_val) * np.random.rand()
-        sigma_img = np.random.randn(img.shape[0], img.shape[1]) * sigma
+        sigma_img = np.random.randn(img.shape[0], img.shape[1], img.shape[2]) * sigma
         img = img + sigma_img
 
     # apply blur augmentation
@@ -154,6 +159,19 @@ def augment_image(img, mask=None, rotation_flag=False, reflection_flag=False,
             sigma = 0
         if sigma > 0:
             img = scipy.ndimage.filters.gaussian_filter(img, sigma, mode='reflect')
+
+    if intensity_augmentation_severity > 0:
+        img_range = np.max(img) - np.min(img)
+        if debug_worst_possible_transformation:
+            value = 1 * intensity_augmentation_severity * img_range
+        else:
+            value = np.random.rand() * intensity_augmentation_severity * img_range
+        if np.random.rand() > 0.5:
+            sign = 1.0
+        else:
+            sign = -1.0
+        delta = sign * value
+        img = img + delta # additive intensity adjustment
 
     img = np.asarray(img, dtype=np.float32)
     if mask is not None:
@@ -181,14 +199,8 @@ def apply_affine_transformation(I, orientation, reflect_x, reflect_y, jitter_x, 
     return I
 
 
+
 class ImageReader:
-    # # setup the image data augmentation parameters
-    # _reflection_flag = True
-    # _rotation_flag = True
-    # _jitter_augmentation_severity = 0.1  # x% of a FOV
-    # _noise_augmentation_severity = 0.02  # vary noise by x% of the dynamic range present in the image
-    # _scale_augmentation_severity = 0.1  # vary size by x%
-    # _blur_max_sigma = 2  # pixels
 
     def __init__(self, img_db, use_augmentation=True, balance_classes=False, shuffle=True, num_workers=1, number_classes=2, augmentation_reflection=0, augmentation_rotation=0, augmentation_jitter=0, augmentation_noise=0, augmentation_scale=0, augmentation_blur_max_sigma=0):
         random.seed()
@@ -245,11 +257,11 @@ class ImageReader:
             # get the first serialized value from the database and convert from serialized representation
             datum.ParseFromString(cursor.value())
             # record the image size
-            self.image_size = [datum.img_height, datum.img_width]
+            self.image_size = [datum.img_height, datum.img_width, datum.channels]
 
-            if self.image_size[0] % 16 != 0:
+            if self.image_size[0] % unet_model.UNet.SIZE_FACTOR != 0:
                 raise IOError('Input Image tile height needs to be a multiple of 16 to allow integer sized downscaled feature maps')
-            if self.image_size[1] % 16 != 0:
+            if self.image_size[1] % unet_model.UNet.SIZE_FACTOR != 0:
                 raise IOError('Input Image tile height needs to be a multiple of 16 to allow integer sized downscaled feature maps')
 
             # iterate over the database getting the keys
@@ -279,7 +291,8 @@ class ImageReader:
         return self.image_size
 
     def get_image_tensor_shape(self):
-        return [1, self.image_size[0], self.image_size[1]]
+        # HWC to CHW
+        return [self.image_size[2], self.image_size[0], self.image_size[1]]
 
     def get_label_tensor_shape(self):
         return [self.image_size[0], self.image_size[1]]
@@ -377,7 +390,7 @@ class ImageReader:
                 # convert from string to numpy array
                 I = np.fromstring(datum.image, dtype=datum.img_type)
                 # reshape the numpy array using the dimensions recorded in the datum
-                I = I.reshape(datum.img_height, datum.img_width)
+                I = I.reshape((datum.img_height, datum.img_width, datum.channels))
 
                 # convert from string to numpy array
                 M = np.fromstring(datum.mask, dtype=datum.mask_type)
@@ -389,22 +402,20 @@ class ImageReader:
 
                     # perform image data augmentation
                     I, M = augment_image(I, M,
-                                                 reflection_flag=self._reflection_flag,
-                                                 rotation_flag=self._rotation_flag,
-                                                 jitter_augmentation_severity=self._jitter_augmentation_severity,
-                                                 noise_augmentation_severity=self._noise_augmentation_severity,
-                                                 scale_augmentation_severity=self._scale_augmentation_severity,
-                                                 blur_augmentation_max_sigma=self._blur_max_sigma)
+                                         reflection_flag=self._reflection_flag,
+                                         rotation_flag=self._rotation_flag,
+                                         jitter_augmentation_severity=self._jitter_augmentation_severity,
+                                         noise_augmentation_severity=self._noise_augmentation_severity,
+                                         scale_augmentation_severity=self._scale_augmentation_severity,
+                                         blur_augmentation_max_sigma=self._blur_max_sigma)
 
                 # format the image into a tensor
                 # reshape into tensor (CHW)
-                I = I.reshape((1, I.shape[0], I.shape[1]))
+                I = I.transpose((2, 0, 1))
                 I = I.astype(np.float32)
                 I = zscore_normalize(I)
 
-                # reshape into tensor (HWC)
                 M = M.astype(np.int32)
-                # M = M.reshape((M.shape[0], M.shape[1]))
                 # convert to a one-hot (HWC) representation
                 h, w = M.shape
                 M = M.reshape(-1)
@@ -451,7 +462,8 @@ class ImageReader:
         print('Creating Dataset')
         # wrap the input queues into a Dataset
         # this sets up the imagereader class as a Python generator
-        image_shape = tf.TensorShape((1, self.image_size[0], self.image_size[1]))
+        # Images come in as HWC, and are converted into CHW for network
+        image_shape = tf.TensorShape((self.image_size[2], self.image_size[0], self.image_size[1]))
         label_shape = tf.TensorShape((self.image_size[0], self.image_size[1], self.nb_classes))
         return tf.data.Dataset.from_generator(self.generator, output_types=(tf.float32, tf.int32), output_shapes=(image_shape, label_shape))
 

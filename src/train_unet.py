@@ -83,10 +83,10 @@ def train_model(output_folder, scratch_dir, batch_size, train_lmdb_filepath, tes
             test_loss_metric = tf.keras.metrics.Mean('test_loss', dtype=tf.float32)
             test_acc_metric = tf.keras.metrics.CategoricalAccuracy('test_accuracy')
 
-            train_log_dir = os.path.join(output_folder, 'train')
+            train_log_dir = os.path.join(output_folder, 'tensorboard','train')
             if not os.path.exists(train_log_dir):
                 os.makedirs(train_log_dir)
-            test_log_dir = os.path.join(output_folder, 'test')
+            test_log_dir = os.path.join(output_folder, 'tensorboard','test')
             if not os.path.exists(test_log_dir):
                 os.makedirs(test_log_dir)
 

@@ -13,10 +13,11 @@ import shutil
 import lmdb
 import random
 import argparse
+import unet_model
 
 
 def read_image(fp):
-    img = skimage.io.imread(fp, as_grey=True)
+    img = skimage.io.imread(fp)
     return img
 
 
@@ -25,12 +26,20 @@ def write_img_to_db(txn, img, msk, key_str):
         raise Exception("Img must be numpy array to store into db")
     if type(msk) is not np.ndarray:
         raise Exception("Img must be numpy array to store into db")
+    if len(img.shape) > 3:
+        raise Exception("Img must be 2D or 3D [HW, or HWC] format")
+    if len(img.shape) < 2:
+        raise Exception("Img must be 2D or 3D [HW, or HWC] format")
+
+    if len(img.shape) == 2:
+        # make a 3D array
+        img = img.reshape((img.shape[0], img.shape[1], 1))
 
     # get the list of labels in the image
     labels = np.unique(msk)
 
     datum = ImageMaskPair()
-    datum.channels = 1
+    datum.channels = img.shape[2]
     datum.img_height = img.shape[0]
     datum.img_width = img.shape[1]
 
@@ -52,7 +61,7 @@ def enforce_size_multiple(img):
 
     # this function crops the input image down slightly to be a size multiple of 16
 
-    factor = 16
+    factor = unet_model.UNet.SIZE_FACTOR
     tgt_h = int(np.floor(h / factor) * factor)
     tgt_w = int(np.floor(w / factor) * factor)
 
@@ -69,8 +78,6 @@ def process_slide_tiling(img, msk, tile_size):
     # get the height of the image
     height = img.shape[0]
     width = img.shape[1]
-
-    assert img.shape == msk.shape, 'Image and Mask must be the same dimensions/shape'
 
     img_list = []
     msk_list = []
@@ -128,6 +135,8 @@ def generate_database_tiling(img_list, database_name, image_filepath, mask_filep
         img = read_image(os.path.join(image_filepath, img_file_name))
         msk = read_image(os.path.join(mask_filepath, img_file_name))
         msk = msk.astype(np.uint8)
+        assert img.shape[0] == msk.shape[0], 'Image and Mask must be the same Height'
+        assert img.shape[1] == msk.shape[1], 'Image and Mask must be the same Width'
 
         # convert the image mask pair into tiles
         img_tile_list, msk_tile_list = process_slide_tiling(img, msk, tile_size)
@@ -170,6 +179,8 @@ def generate_database(img_list, database_name, image_filepath, mask_filepath, ou
         img = read_image(os.path.join(image_filepath, img_file_name))
         msk = read_image(os.path.join(mask_filepath, img_file_name))
         msk = msk.astype(np.uint8)
+        assert img.shape[0] == msk.shape[0], 'Image and Mask must be the same Height'
+        assert img.shape[1] == msk.shape[1], 'Image and Mask must be the same Width'
 
         img = enforce_size_multiple(img)
         msk = enforce_size_multiple(msk)
@@ -218,7 +229,7 @@ def build_database(image_folder, mask_folder, output_folder, dataset_name, train
         generate_database(test_img_files, test_database_name, image_folder, mask_folder, output_folder)
 
     else:
-        assert tile_size % 16 == 0, 'UNet requires tiles with shapes that are multiples of 16'
+        assert tile_size % unet_model.UNet.SIZE_FACTOR == 0, 'UNet requires tiles with shapes that are multiples of 16'
         print('building train database')
         train_database_name = 'train-{}.lmdb'.format(dataset_name)
         generate_database_tiling(train_img_files, train_database_name, image_folder, mask_folder, output_folder)
