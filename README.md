@@ -21,7 +21,8 @@ docker build . -t wipp/wipp-unet-cnn-train-plugin:${version}
 
 ```bash
 nvidia-docker run \
-    -v "path/to/input/data/folder":/data/inputs \
+    -v "path/to/input/data/images":/data/images \
+    -v "path/to/input/data/masks":/data/masks \
     -v "path/to/output/folder":/data/outputs \
     wipp/wipp-unet-cnn-train-plugin \
     --batchSize 8 \
