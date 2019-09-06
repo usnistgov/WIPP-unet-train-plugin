@@ -68,11 +68,6 @@ def train_model(output_folder, tensorboard_dir, scratch_dir, batch_size, train_l
 
             checkpoint = tf.train.Checkpoint(optimizer=model.get_optimizer(), model=model.get_keras_model())
 
-            # print the model summary to file
-            with open(os.path.join(output_folder, 'model.txt'), 'w') as summary_fh:
-                print_fn = lambda x: print(x, file=summary_fh)
-                model.get_keras_model().summary(print_fn=print_fn)
-
             # train_epoch_size = train_reader.get_image_count()/batch_size
             train_epoch_size = test_every_n_steps
             test_epoch_size = test_reader.get_image_count() / batch_size
@@ -142,11 +137,6 @@ def train_model(output_folder, tensorboard_dir, scratch_dir, batch_size, train_l
                     tf.summary.scalar('accuracy', test_acc_metric.result(), step=int((epoch+1) * train_epoch_size))
                 test_loss_metric.reset_states()
                 test_acc_metric.reset_states()
-
-                with open(os.path.join(output_folder, 'test_loss.csv'), 'w') as csvfile:
-                    for i in range(len(test_loss)):
-                        csvfile.write(str(test_loss[i]))
-                        csvfile.write('\n')
 
                 # determine if to record a new checkpoint based on best test loss
                 if (len(test_loss) - 1) == np.argmin(test_loss):
