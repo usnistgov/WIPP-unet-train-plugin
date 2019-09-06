@@ -28,7 +28,7 @@ CONVERGENCE_TOLERANCE = 1e-4
 READER_COUNT = 1 # 1 per GPU, both the reader count and batch size will be scaled based on the number of GPUs
 
 
-def train_model(output_folder, scratch_dir, batch_size, train_lmdb_filepath, test_lmdb_filepath, number_classes, balance_classes, learning_rate, test_every_n_steps, use_augmentation, augmentation_reflection, augmentation_rotation, augmentation_jitter, augmentation_noise, augmentation_scale, augmentation_blur_max_sigma):
+def train_model(output_folder, tensorboard_dir, scratch_dir, batch_size, train_lmdb_filepath, test_lmdb_filepath, number_classes, balance_classes, learning_rate, test_every_n_steps, use_augmentation, augmentation_reflection, augmentation_rotation, augmentation_jitter, augmentation_noise, augmentation_scale, augmentation_blur_max_sigma):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
@@ -85,10 +85,10 @@ def train_model(output_folder, scratch_dir, batch_size, train_lmdb_filepath, tes
             test_loss_metric = tf.keras.metrics.Mean('test_loss', dtype=tf.float32)
             test_acc_metric = tf.keras.metrics.CategoricalAccuracy('test_accuracy')
 
-            train_log_dir = os.path.join(output_folder, 'tensorboard','train')
+            train_log_dir = os.path.join(tensorboard_dir,'train')
             if not os.path.exists(train_log_dir):
                 os.makedirs(train_log_dir)
-            test_log_dir = os.path.join(output_folder, 'tensorboard','test')
+            test_log_dir = os.path.join(tensorboard_dir,'test')
             if not os.path.exists(test_log_dir):
                 os.makedirs(test_log_dir)
 
@@ -198,6 +198,7 @@ def main():
     parser.add_argument('--numberClasses', dest='number_classes', type=int, default=2)
     parser.add_argument('--learningRate', dest='learning_rate', type=float, default=1e-4)
     parser.add_argument('--outputDir', dest='output_dir', type=str, help='Folder where outputs will be saved (Required)', required=True)
+    parser.add_argument('--tensorboardDir', dest='tensorboard_dir', type=str, help='Folder where tensorboard logs  will be saved (Required)', required=True)
     parser.add_argument('--testEveryNSteps', dest='test_every_n_steps', type=int, help='number of gradient update steps to take between test epochs', default=1000)
     parser.add_argument('--balanceClasses', dest='balance_classes', type=str, help='whether to balance classes [YES, NO]', default="NO")
 
@@ -232,6 +233,7 @@ def main():
     # Training parameters
     batch_size = args.batch_size
     output_dir = args.output_dir
+    tensorboard_dir = args.tensorboard_dir
     number_classes = args.number_classes
 
     learning_rate = args.learning_rate
@@ -245,6 +247,7 @@ def main():
     print('test_every_n_steps = {}'.format(test_every_n_steps))
     print('balance_classes = {}'.format(balance_classes))
     print('output_dir = {}'.format(output_dir))
+    print('tensorboard_dir = {}'.format(tensorboard_dir))
 
     # Augmentation parameters
     use_augmentation = args.use_augmentation
@@ -286,7 +289,7 @@ def main():
         train_lmdb_filepath = os.path.join(scratch_dir, train_database_name)
         test_lmdb_filepath = os.path.join(scratch_dir, test_database_name)
 
-        train_model(output_dir, scratch_dir, batch_size, train_lmdb_filepath, test_lmdb_filepath, number_classes, balance_classes, learning_rate, test_every_n_steps, use_augmentation, augmentation_reflection, augmentation_rotation, augmentation_jitter, augmentation_noise, augmentation_scale, augmentation_blur_max_sigma)
+        train_model(output_dir, tensorboard_dir, scratch_dir, batch_size, train_lmdb_filepath, test_lmdb_filepath, number_classes, balance_classes, learning_rate, test_every_n_steps, use_augmentation, augmentation_reflection, augmentation_rotation, augmentation_jitter, augmentation_noise, augmentation_scale, augmentation_blur_max_sigma)
 
 
 
