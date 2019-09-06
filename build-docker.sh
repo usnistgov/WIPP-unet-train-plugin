@@ -6,5 +6,4 @@
 
 version=0.0.2
 docker build . -t wipp/wipp-unet-cnn-train-plugin:latest
-
 docker build . -t wipp/wipp-unet-cnn-train-plugin:${version}
