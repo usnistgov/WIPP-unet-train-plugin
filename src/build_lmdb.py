@@ -175,7 +175,6 @@ def generate_database(img_list, database_name, image_filepath, mask_filepath, ou
             csvfile.write(fn + '\n')
 
     for i in range(len(img_list)):
-        print('  {}/{}'.format(i, len(img_list)))
         txn_nb = 0
         img_file_name = img_list[i]
         block_key = img_file_name.replace('.tif','')

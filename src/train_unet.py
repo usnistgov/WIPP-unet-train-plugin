@@ -111,7 +111,7 @@ def train_model(output_folder, tensorboard_dir, scratch_dir, batch_size, train_l
                     inputs = (batch_images, batch_labels, train_loss_metric, train_acc_metric)
                     model.dist_train_step(mirrored_strategy, inputs)
 
-                    print('Train Epoch {}: Batch {}/{}: Loss {} Accuracy = {}'.format(epoch, step, train_epoch_size, train_loss_metric.result(), train_acc_metric.result()))
+                    # print('Train Epoch {}: Batch {}/{}: Loss {} Accuracy = {}'.format(epoch, step, train_epoch_size, train_loss_metric.result(), train_acc_metric.result()))
                     with train_summary_writer.as_default():
                         tf.summary.scalar('loss', train_loss_metric.result(), step=int(epoch * train_epoch_size + step))
                         tf.summary.scalar('accuracy', train_acc_metric.result(), step=int(epoch * train_epoch_size + step))
