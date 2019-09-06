@@ -1,9 +1,9 @@
 {
   "name": "WIPP UNet CNN Training Plugin",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "title": "UNet CNN Training",
   "description": "Train a UNet CNN model",
-  "containerId": "wipp/wipp-unet-cnn-train-plugin:0.0.1",
+  "containerId": "wipp/wipp-unet-cnn-train-plugin:0.0.2",
   "inputs": [
 
     {
@@ -162,11 +162,13 @@
   "outputs": [
     {
       "name": "outputDir",
-      "type": "collection",
-      "options": {
-        "format": "tiff"
-      },
+      "type": "tensorflowModel",
       "description": "Output data for the plugin"
+    },
+    {
+      "name": "tensorboardDir",
+      "type": "tensorboardLogs",
+      "description": "tensorboard Logs data for the plugin"
     }
   ],
   "ui": [
