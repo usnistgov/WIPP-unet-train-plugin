@@ -45,7 +45,7 @@ def zscore_normalize(image_data):
     return image_data
 
 
-def augment_image(img, mask=None, rotation_flag=0, reflection_flag=0,
+def augment_image(img, mask=None, rotation_flag=False, reflection_flag=False,
                   jitter_augmentation_severity=0,  # jitter augmentation severity as a fraction of the image size
                   noise_augmentation_severity=0,  # noise augmentation as a percentage of current noise
                   scale_augmentation_severity=0,  # scale augmentation as a percentage of the image size):
@@ -424,9 +424,12 @@ class ImageReader:
                 h, w = M.shape
                 M = M.reshape(-1)
                 fM = np.zeros((len(M), self.nb_classes), dtype=np.int32)
-                fM[np.arange(len(M)), M] = 1
+                try:
+                    fM[np.arange(len(M)), M] = 1
+                except IndexError as e:
+                    print('ImageReader Error: Number of classes specified differs from number of observed classes in data')
+                    raise e
                 fM = fM.reshape((h, w, self.nb_classes))
-
 
                 # add the batch in the output queue
                 # this put block until there is space in the output queue (size 50)

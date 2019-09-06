@@ -4,14 +4,12 @@
 
 import sys
 if sys.version_info[0] < 3:
-    print('Python3 required')
-    sys.exit(1)
+    raise Exception('Python3 required')
 
 import tensorflow as tf
 tf_version = tf.__version__.split('.')
 if int(tf_version[0]) != 2:
-    print('Tensorflow 2.x.x required')
-    sys.exit(1)
+    raise Exception('Tensorflow 2.x.x required')
 
 
 class UNet():
@@ -21,6 +19,7 @@ class UNet():
     _POOLING_STRIDE = 2
 
     SIZE_FACTOR = 16
+    RADIUS = 96  # nearest multiple of 16 over 92 pixels radius required from the unet paper ((572 - 388) / 2 = 92)
 
     @staticmethod
     def _conv_layer(input, filter_count, kernel, stride=1):
@@ -59,20 +58,19 @@ class UNet():
         output = tf.keras.layers.Dropout(rate=0.5)(input)
         return output
 
-    def __init__(self, number_classes, global_batch_size, img_size, learning_rate=3e-4):
+    def __init__(self, number_classes, global_batch_size, img_size, learning_rate=3e-4, label_smoothing=0):
 
         self.img_size = img_size
         self.learning_rate = learning_rate
         self.number_classes = number_classes
         self.global_batch_size = global_batch_size
-        self.is_training = False
 
         # image is HWC (normally e.g. RGB image) however data needs to be NCHW for network
         self.inputs = tf.keras.Input(shape=(img_size[2], None, None))
         # self.inputs = tf.keras.Input(shape=(img_size[2], img_size[0], img_size[1]))
         self.model = self._build_model()
 
-        self.loss_fn = tf.keras.losses.CategoricalCrossentropy(from_logits=False, reduction=tf.keras.losses.Reduction.NONE)
+        self.loss_fn = tf.keras.losses.CategoricalCrossentropy(from_logits=False, label_smoothing=label_smoothing, reduction=tf.keras.losses.Reduction.NONE)
 
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=self.learning_rate)
 
@@ -141,11 +139,14 @@ class UNet():
     def get_keras_model(self):
         return self.model
 
-    def set_is_training(self, val):
-        self.is_training = val
-
     def get_optimizer(self):
         return self.optimizer
+
+    def set_learning_rate(self, learning_rate):
+        self.optimizer.learning_rate = learning_rate
+
+    def get_learning_rate(self):
+        return self.optimizer.learning_rate
 
     def train_step(self, inputs):
         (images, labels, loss_metric, accuracy_metric) = inputs

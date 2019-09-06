@@ -4,8 +4,7 @@
 
 import sys
 if sys.version_info[0] < 3:
-    print('Python3 required')
-    sys.exit(1)
+    raise Exception('Python3 required')
 
 import os
 # set the system environment so that the PCIe GPU ids match the Nvidia ids in nvidia-smi
@@ -17,8 +16,7 @@ import numpy as np
 import tensorflow as tf
 tf_version = tf.__version__.split('.')
 if int(tf_version[0]) != 2:
-    print('Tensorflow 2.x.x required')
-    sys.exit(1)
+    raise Exception('Tensorflow 2.x.x required')
 
 import unet_model
 import imagereader
@@ -102,6 +100,14 @@ def train_model(output_folder, scratch_dir, batch_size, train_lmdb_filepath, tes
             while True:  # loop until early stopping
                 print('---- Epoch: {} ----'.format(epoch))
 
+                if epoch == 0:
+                    cur_train_epoch_size = min(1000, train_epoch_size)
+                    print('Performing Adam Optimizer learning rate warmup for {} steps'.format(cur_train_epoch_size))
+                    model.set_learning_rate(learning_rate / 10)
+                else:
+                    cur_train_epoch_size = train_epoch_size
+                    model.set_learning_rate(learning_rate)
+
                 # Iterate over the batches of the train dataset.
                 for step, (batch_images, batch_labels) in enumerate(train_dataset):
                     if step > train_epoch_size:
@@ -162,7 +168,7 @@ def train_model(output_folder, scratch_dir, batch_size, train_lmdb_filepath, tes
                     break  # break the epoch loop
                 epoch = epoch + 1
 
-        finally: # if any erros happened during training, shut down the disk readers
+        finally: # if any errors happened during training, shut down the disk readers
             print('Shutting down train_reader')
             train_reader.shutdown()
             print('Shutting down test_reader')
@@ -181,7 +187,6 @@ def main():
     parser = argparse.ArgumentParser(prog='train_unet', description='Script which trains a unet model')
 
     # lmdb parameters
-
     parser.add_argument('--imageDir', dest='image_dir', type=str, help='filepath to the directory containing the images', required=True)
     parser.add_argument('--maskDir', dest='mask_dir', type=str, help='filepath to the directory containing the masks', required=True)
     parser.add_argument('--useTiling', dest='use_tiling', type=str, help='whether to use tiling when training [YES, NO]', default="NO")
