@@ -105,7 +105,7 @@ def train_model(output_folder, tensorboard_dir, scratch_dir, batch_size, train_l
 
                 # Iterate over the batches of the train dataset.
                 for step, (batch_images, batch_labels) in enumerate(train_dataset):
-                    if step > train_epoch_size:
+                    if step > cur_train_epoch_size:
                         break
 
                     inputs = (batch_images, batch_labels, train_loss_metric, train_acc_metric)
@@ -187,8 +187,8 @@ def main():
     parser.add_argument('--batchSize', dest='batch_size', type=int, help='training batch size', default=4)
     parser.add_argument('--numberClasses', dest='number_classes', type=int, default=2)
     parser.add_argument('--learningRate', dest='learning_rate', type=float, default=1e-4)
-    parser.add_argument('--outputDir', dest='output_dir', type=str, help='Folder where outputs will be saved (Required)', required=True)
-    parser.add_argument('--tensorboardDir', dest='tensorboard_dir', type=str, help='Folder where tensorboard logs  will be saved (Required)', required=True)
+    parser.add_argument('--model', dest='output_dir', type=str, help='Folder where outputs will be saved (Required)', required=True)
+    parser.add_argument('--tensorboard', dest='tensorboard_dir', type=str, help='Folder where tensorboard logs  will be saved (Required)', required=True)
     parser.add_argument('--testEveryNSteps', dest='test_every_n_steps', type=int, help='number of gradient update steps to take between test epochs', default=1000)
     parser.add_argument('--balanceClasses', dest='balance_classes', type=str, help='whether to balance classes [YES, NO]', default="NO")
 
