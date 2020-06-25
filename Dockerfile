@@ -4,7 +4,7 @@
 
 # You are solely responsible for determining the appropriateness of using and distributing the software and you assume all risks associated with its use, including but not limited to the risks and costs of program errors, compliance with applicable laws, damage to or loss of data, programs or equipment, and the unavailability or interruption of operation. This software is not intended to be used in any situation where a failure could cause risk of injury or damage to property. The software developed by NIST employees is not subject to copyright protection within the United States.
 
-FROM tensorflow/tensorflow:2.0.0rc0-gpu-py3
+FROM tensorflow/tensorflow:2.1.0-gpu-py3
 LABEL maintainer="National Institue of Standards and Technology"
 
 ENV DEBIAN_FRONTEND noninteractive
@@ -17,7 +17,7 @@ RUN mkdir -p ${EXEC_DIR} \
     && mkdir -p ${DATA_DIR}/masks \
     && mkdir -p ${DATA_DIR}/outputs
 
-RUN apt -y install graphviz
+#RUN apt -y install graphviz
 RUN pip3 install lmdb scikit-image
 
 #Copy executable

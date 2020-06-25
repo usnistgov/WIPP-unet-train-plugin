@@ -189,8 +189,8 @@ def main():
     parser.add_argument('--batchSize', dest='batch_size', type=int, help='training batch size', default=4)
     parser.add_argument('--numberClasses', dest='number_classes', type=int, default=2)
     parser.add_argument('--learningRate', dest='learning_rate', type=float, default=1e-4)
-    parser.add_argument('--model', dest='output_dir', type=str, help='Folder where outputs will be saved (Required)', required=True)
-    parser.add_argument('--tensorboard', dest='tensorboard_dir', type=str, help='Folder where tensorboard logs  will be saved (Required)', required=True)
+    parser.add_argument('--outputDir', dest='output_dir', type=str, help='Folder where outputs will be saved (Required)', required=True)
+    parser.add_argument('--tensorboardDir', dest='tensorboard_dir', type=str, help='Folder where tensorboard logs  will be saved (Required)', required=True)
     parser.add_argument('--testEveryNSteps', dest='test_every_n_steps', type=int, help='number of gradient update steps to take between test epochs', default=1000)
     parser.add_argument('--balanceClasses', dest='balance_classes', type=str, help='whether to balance classes [YES, NO]', default="NO")
 
@@ -203,6 +203,11 @@ def main():
     parser.add_argument('--augmentationScale', dest='augmentation_scale', type=float, help='scale data augmentation severity as a percentage of the image size [0 = none, 1 = 100%], default = 0.1 (10% max change in image size)', default=0.1)
     parser.add_argument('--augmentationBlurMaxSigma', dest='augmentation_blur_max_sigma', type=float, help='maximum sigma to use in a gaussian blurring kernel. Blur kernel is selected as rand(0, max)', default=2)
 
+
+    print('****************************************')
+    # verify the GPU is visible as it is required
+    print('Checking that the GPU is visible, since it is required for training.')
+    print('Visble GPU Devices: {}'.format(tf.config.list_physical_devices('GPU')))
 
     print('Arguments:')
     args = parser.parse_args()

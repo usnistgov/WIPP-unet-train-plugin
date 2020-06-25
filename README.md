@@ -20,13 +20,14 @@ docker build . -t wipp/wipp-unet-cnn-train-plugin:${version}
 ## Run Docker File
 
 ```bash
-nvidia-docker run \
+docker run --gpus device=all \
     -v "path/to/input/data/images":/data/images \
     -v "path/to/input/data/masks":/data/masks \
     -v "path/to/output/folder":/data/outputs \
     wipp/wipp-unet-cnn-train-plugin \
     --batchSize 8 \
     --outputDir /data/outputs \
+    --tensorboardDir /data/outputs \
     --imageDir /data/images \
     --maskDir /data/masks \
     --testEveryNSteps 1000
@@ -39,6 +40,7 @@ usage: train_unet [-h] --imageDir IMAGE_DIR --maskDir MASK_DIR
                   [--trainFraction TRAIN_FRACTION] [--batchSize BATCH_SIZE]
                   [--numberClasses NUMBER_CLASSES]
                   [--learningRate LEARNING_RATE] --outputDir OUTPUT_DIR
+                  --tensorboardDir TENSORBOARD_DIR
                   [--testEveryNSteps TEST_EVERY_N_STEPS]
                   [--balanceClasses BALANCE_CLASSES]
                   [--useAugmentation USE_AUGMENTATION]
@@ -48,6 +50,5 @@ usage: train_unet [-h] --imageDir IMAGE_DIR --maskDir MASK_DIR
                   [--augmentationNoise AUGMENTATION_NOISE]
                   [--augmentationScale AUGMENTATION_SCALE]
                   [--augmentationBlurMaxSigma AUGMENTATION_BLUR_MAX_SIGMA]
-
 
 ```
