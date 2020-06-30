@@ -18,7 +18,7 @@ RUN mkdir -p ${EXEC_DIR} \
     && mkdir -p ${DATA_DIR}/outputs
 
 #RUN apt -y install graphviz
-RUN pip3 install lmdb scikit-image
+RUN pip3 install lmdb scikit-image imagecodecs
 
 #Copy executable
 COPY src ${EXEC_DIR}/
