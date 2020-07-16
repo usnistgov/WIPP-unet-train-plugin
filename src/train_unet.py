@@ -25,6 +25,10 @@ import imagereader
 import build_lmdb
 import tempfile
 
+gpu_devices = tf.config.experimental.list_physical_devices('GPU')
+for device in gpu_devices:
+    tf.config.experimental.set_memory_growth(device, True)
+
 EARLY_STOPPING_COUNT = 10
 CONVERGENCE_TOLERANCE = 1e-4
 READER_COUNT = 1 # 1 per GPU, both the reader count and batch size will be scaled based on the number of GPUs
