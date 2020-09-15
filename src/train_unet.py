@@ -191,7 +191,7 @@ def main():
     parser.add_argument('--trainFraction', dest='train_fraction', type=float, help='what fraction of the dataset to use for training (0.0, 1.0)', default=0.8)
     # added for the concrete project
     parser.add_argument('--useIntensityScaling', dest='use_intensity_scaling', type=str,
-                        help='whether to use intensity scaling when training [YES, NO]', default="NO")
+                        help='whether to use intensity scaling when training [YES, NO]', default="YES")
 
     # Training parameters
     parser.add_argument('--batchSize', dest='batch_size', type=int, help='training batch size', default=4)
