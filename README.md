@@ -51,5 +51,6 @@ usage: train_unet [-h] --imageDir IMAGE_DIR --maskDir MASK_DIR
                   [--augmentationNoise AUGMENTATION_NOISE]
                   [--augmentationScale AUGMENTATION_SCALE]
                   [--augmentationBlurMaxSigma AUGMENTATION_BLUR_MAX_SIGMA]
+                  [--augmentationIntensity AUGMENTATION_INTENSITY]
 
 ```

@@ -173,6 +173,13 @@
       "description": "The max size of a gaussian blur kernel used to blur the images [0 = None]. Blur augmentation performs a gaussian smoothing of the image to blur out details. This controls how large the blur kernel is, and therefore the strength of the blurring effect.",
       "required": false,
       "default": 2
+    },
+    {
+      "name": "augmentationIntensity",
+      "type": "number",
+      "description": "The severity of intensity data augmentation [0 = None, 1 = 100% of dynamic range]. Intensity augmentation shifts the intensity values by a percentage of the dynamic range.",
+      "required": false,
+      "default": 0.0
     }
   ],
   "outputs": [
