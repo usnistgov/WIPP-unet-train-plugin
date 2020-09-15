@@ -95,6 +95,18 @@
       "required": true,
       "default": "YES"
     },
+      {
+      "name": "useIntensityScaling",
+      "type": "enum",
+			"options": {
+				"values": [
+					"NO","YES"
+				]
+			},
+      "description": "Controls whether or not to intensity-scale the input images for training in order to accommodate unevenly distributed intensity-defining classes across multiple images.",
+      "required": true,
+      "default": "YES"
+    },
     {
       "name": "useAugmentation",
       "type": "enum",

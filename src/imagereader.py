@@ -207,11 +207,12 @@ def apply_affine_transformation(I, orientation, reflect_x, reflect_y, jitter_x, 
 
 class ImageReader:
 
-    def __init__(self, img_db, use_augmentation=True, balance_classes=False, shuffle=True, num_workers=1, number_classes=2, augmentation_reflection=0, augmentation_rotation=0, augmentation_jitter=0, augmentation_noise=0, augmentation_scale=0, augmentation_blur_max_sigma=0):
+    def __init__(self, img_db, use_intensity_scaling = False, use_augmentation=True, balance_classes=False, shuffle=True, num_workers=1, number_classes=2, augmentation_reflection=0, augmentation_rotation=0, augmentation_jitter=0, augmentation_noise=0, augmentation_scale=0, augmentation_blur_max_sigma=0):
         random.seed()
 
         # copy inputs to class variables
         self.image_db = img_db
+        self.use_intensity_scaling = use_intensity_scaling # added for the concrete project
         self.use_augmentation = use_augmentation
         self.balance_classes = balance_classes
         self.shuffle = shuffle
@@ -418,7 +419,8 @@ class ImageReader:
                 # reshape into tensor (CHW)
                 I = I.transpose((2, 0, 1))
                 I = I.astype(np.float32)
-                I = zscore_normalize(I)
+                if self.use_intensity_scaling: # added for the concrete project
+                    I = zscore_normalize(I)
 
                 M = M.astype(np.int32)
                 # convert to a one-hot (HWC) representation

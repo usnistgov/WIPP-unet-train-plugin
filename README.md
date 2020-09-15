@@ -43,6 +43,7 @@ usage: train_unet [-h] --imageDir IMAGE_DIR --maskDir MASK_DIR
                   --tensorboardDir TENSORBOARD_DIR
                   [--testEveryNSteps TEST_EVERY_N_STEPS]
                   [--balanceClasses BALANCE_CLASSES]
+                  [--useIntensityScaling USE_INTENSITY_SCALING] 
                   [--useAugmentation USE_AUGMENTATION]
                   [--augmentationReflection AUGMENTATION_REFLECTION]
                   [--augmentationRotation AUGMENTATION_ROTATION]

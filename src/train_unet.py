@@ -33,8 +33,8 @@ EARLY_STOPPING_COUNT = 10
 CONVERGENCE_TOLERANCE = 1e-4
 READER_COUNT = 1 # 1 per GPU, both the reader count and batch size will be scaled based on the number of GPUs
 
-
-def train_model(output_folder, tensorboard_dir, scratch_dir, batch_size, train_lmdb_filepath, test_lmdb_filepath, number_classes, balance_classes, learning_rate, test_every_n_steps, use_augmentation, augmentation_reflection, augmentation_rotation, augmentation_jitter, augmentation_noise, augmentation_scale, augmentation_blur_max_sigma):
+# use_intensity_scaling was added for the concrete project 2020-09-15
+def train_model(output_folder, tensorboard_dir, scratch_dir, batch_size, train_lmdb_filepath, test_lmdb_filepath, number_classes, balance_classes, learning_rate, test_every_n_steps, use_intensity_scaling, use_augmentation, augmentation_reflection, augmentation_rotation, augmentation_jitter, augmentation_noise, augmentation_scale, augmentation_blur_max_sigma):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
@@ -48,12 +48,13 @@ def train_model(output_folder, tensorboard_dir, scratch_dir, batch_size, train_l
         # scale the number of I/O readers based on the GPU count
         reader_count = READER_COUNT * mirrored_strategy.num_replicas_in_sync
 
+        # the flag use_intensity_scale was added for the concrete project
         print('Setting up test image reader')
-        test_reader = imagereader.ImageReader(test_lmdb_filepath, use_augmentation=False, shuffle=False, num_workers=reader_count, balance_classes=False, number_classes=number_classes)
+        test_reader = imagereader.ImageReader(test_lmdb_filepath, use_intensity_scaling=use_intensity_scaling, use_augmentation=False, shuffle=False, num_workers=reader_count, balance_classes=False, number_classes=number_classes)
         print('Test Reader has {} images'.format(test_reader.get_image_count()))
 
         print('Setting up training image reader')
-        train_reader = imagereader.ImageReader(train_lmdb_filepath, use_augmentation=use_augmentation, shuffle=True, num_workers=reader_count, balance_classes=balance_classes, number_classes=number_classes, augmentation_reflection=augmentation_reflection, augmentation_rotation=augmentation_rotation, augmentation_jitter=augmentation_jitter, augmentation_noise=augmentation_noise, augmentation_scale=augmentation_scale, augmentation_blur_max_sigma=augmentation_blur_max_sigma)
+        train_reader = imagereader.ImageReader(train_lmdb_filepath, use_intensity_scaling=use_intensity_scaling, use_augmentation=use_augmentation, shuffle=True, num_workers=reader_count, balance_classes=balance_classes, number_classes=number_classes, augmentation_reflection=augmentation_reflection, augmentation_rotation=augmentation_rotation, augmentation_jitter=augmentation_jitter, augmentation_noise=augmentation_noise, augmentation_scale=augmentation_scale, augmentation_blur_max_sigma=augmentation_blur_max_sigma)
         print('Train Reader has {} images'.format(train_reader.get_image_count()))
 
         try:  # if any errors happen we want to catch them and shut down the multiprocess readers
@@ -188,6 +189,9 @@ def main():
     parser.add_argument('--useTiling', dest='use_tiling', type=str, help='whether to use tiling when training [YES, NO]', default="NO")
     parser.add_argument('--tileSize', dest='tile_size', type=int, default=256)
     parser.add_argument('--trainFraction', dest='train_fraction', type=float, help='what fraction of the dataset to use for training (0.0, 1.0)', default=0.8)
+    # added for the concrete project
+    parser.add_argument('--useIntensityScaling', dest='use_intensity_scaling', type=str,
+                        help='whether to use intensity scaling when training [YES, NO]', default="NO")
 
     # Training parameters
     parser.add_argument('--batchSize', dest='batch_size', type=int, help='training batch size', default=4)
@@ -219,17 +223,21 @@ def main():
     # lmdb parameters
     use_tiling = args.use_tiling
     use_tiling = use_tiling.upper() == "YES"
+    use_intensity_scaling = args.use_intensity_scaling
+    use_intensity_scaling = use_intensity_scaling.upper() == "YES"
 
     tile_size = args.tile_size
     image_dir = args.image_dir
     mask_dir = args.mask_dir
     train_fraction = args.train_fraction
 
+
     print('use_tiling = {}'.format(use_tiling))
     print('tile_size = {}'.format(tile_size))
     print('image_dir = {}'.format(image_dir))
     print('mask_dir = {}'.format(mask_dir))
     print('train_fraction = []'.format(train_fraction))
+    print('use_intensity_scaling = {}'.format(use_intensity_scaling))
 
     # Training parameters
     batch_size = args.batch_size
@@ -290,7 +298,7 @@ def main():
         train_lmdb_filepath = os.path.join(scratch_dir, train_database_name)
         test_lmdb_filepath = os.path.join(scratch_dir, test_database_name)
 
-        train_model(output_dir, tensorboard_dir, scratch_dir, batch_size, train_lmdb_filepath, test_lmdb_filepath, number_classes, balance_classes, learning_rate, test_every_n_steps, use_augmentation, augmentation_reflection, augmentation_rotation, augmentation_jitter, augmentation_noise, augmentation_scale, augmentation_blur_max_sigma)
+        train_model(output_dir, tensorboard_dir, scratch_dir, batch_size, train_lmdb_filepath, test_lmdb_filepath, number_classes, balance_classes, learning_rate, test_every_n_steps, use_intensity_scaling, use_augmentation, augmentation_reflection, augmentation_rotation, augmentation_jitter, augmentation_noise, augmentation_scale, augmentation_blur_max_sigma)
 
 
 
