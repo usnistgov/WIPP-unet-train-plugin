@@ -12,7 +12,7 @@ docker pull wipp/wipp-unet-cnn-train-plugin
 ```bash
 #!/bin/bash
 
-version=0.0.1
+version=0.0.6
 docker build . -t wipp/wipp-unet-cnn-train-plugin:latest
 docker build . -t wipp/wipp-unet-cnn-train-plugin:${version}
 ```
@@ -43,6 +43,7 @@ usage: train_unet [-h] --imageDir IMAGE_DIR --maskDir MASK_DIR
                   --tensorboardDir TENSORBOARD_DIR
                   [--testEveryNSteps TEST_EVERY_N_STEPS]
                   [--balanceClasses BALANCE_CLASSES]
+                  [--useIntensityScaling USE_INTENSITY_SCALING] 
                   [--useAugmentation USE_AUGMENTATION]
                   [--augmentationReflection AUGMENTATION_REFLECTION]
                   [--augmentationRotation AUGMENTATION_ROTATION]
@@ -50,5 +51,6 @@ usage: train_unet [-h] --imageDir IMAGE_DIR --maskDir MASK_DIR
                   [--augmentationNoise AUGMENTATION_NOISE]
                   [--augmentationScale AUGMENTATION_SCALE]
                   [--augmentationBlurMaxSigma AUGMENTATION_BLUR_MAX_SIGMA]
+                  [--augmentationIntensity AUGMENTATION_INTENSITY]
 
 ```

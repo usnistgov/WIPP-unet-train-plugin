@@ -216,6 +216,8 @@ def build_database(image_folder, mask_folder, output_folder, dataset_name, train
     # find the image files for which annotations exist
     img_files = [f for f in os.listdir(mask_folder) if f.endswith('.{}'.format(image_format))]
 
+    print('len(img_files)', len(img_files))
+
     # in place shuffle
     random.shuffle(img_files)
 
@@ -269,7 +271,11 @@ def main():
     image_format = args.image_format
     tile_size = args.tile_size
 
+    print('test:', image_folder)
+
     build_database(image_folder, mask_folder, output_folder, dataset_name, train_fraction, image_format, tile_size)
 
+if __name__ == "__main__":
+    main()
 
 

@@ -1,13 +1,13 @@
 {
   "name": "WIPP UNet CNN Training Plugin",
-  "version": "0.0.4",
+  "version": "0.0.6",
   "title": "UNet CNN Training",
 "author": "Michael Majurski",
 "institution": "National Institute of Standards and Technology",
 "repository": "https://github.com/usnistgov/WIPP-unet-train-plugin",
 "citation": "Ronneberger, Olaf, Philipp Fischer, and Thomas Brox. \"U-net: Convolutional networks for biomedical image segmentation.\" International Conference on Medical image computing and computer-assisted intervention. Springer, Cham, 2015.",
   "description": "Train a UNet CNN model",
-  "containerId": "wipp/wipp-unet-cnn-train-plugin:0.0.4",
+  "containerId": "wipp/wipp-unet-cnn-train-plugin:0.0.6",
   "inputs": [
 
     {
@@ -95,6 +95,18 @@
       "required": true,
       "default": "YES"
     },
+      {
+      "name": "useIntensityScaling",
+      "type": "enum",
+			"options": {
+				"values": [
+					"NO","YES"
+				]
+			},
+      "description": "Controls whether or not to intensity-scale the input images for training in order to accommodate unevenly distributed intensity-defining classes across multiple images.",
+      "required": true,
+      "default": "YES"
+    },
     {
       "name": "useAugmentation",
       "type": "enum",
@@ -161,6 +173,13 @@
       "description": "The max size of a gaussian blur kernel used to blur the images [0 = None]. Blur augmentation performs a gaussian smoothing of the image to blur out details. This controls how large the blur kernel is, and therefore the strength of the blurring effect.",
       "required": false,
       "default": 2
+    },
+    {
+      "name": "augmentationIntensity",
+      "type": "number",
+      "description": "The severity of intensity data augmentation [0 = None, 1 = 100% of dynamic range]. Intensity augmentation shifts the intensity values by a percentage of the dynamic range.",
+      "required": false,
+      "default": 0.0
     }
   ],
   "outputs": [
