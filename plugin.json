@@ -100,7 +100,7 @@
       "type": "enum",
 			"options": {
 				"values": [
-					"NO","YES"
+					"YES","NO"
 				]
 			},
       "description": "Controls whether or not to intensity-scale the input images for training in order to accommodate unevenly distributed intensity-defining classes across multiple images.",
