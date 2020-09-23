@@ -184,14 +184,14 @@
   ],
   "outputs": [
     {
-      "name": "model",
+      "name": "outputDir",
       "type": "tensorflowModel",
-      "description": "Output data for the plugin"
+      "description": "Output directory data for the plugin"
     },
     {
-      "name": "tensorboard",
+      "name": "tensorboardDir",
       "type": "tensorboardLogs",
-      "description": "tensorboard Logs data for the plugin"
+      "description": "tensorboard directory for Logs data from the plugin"
     }
   ],
   "ui": [
