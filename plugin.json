@@ -100,7 +100,7 @@
       "type": "enum",
 			"options": {
 				"values": [
-					"NO","YES"
+					"YES","NO"
 				]
 			},
       "description": "Controls whether or not to intensity-scale the input images for training in order to accommodate unevenly distributed intensity-defining classes across multiple images.",
@@ -184,14 +184,14 @@
   ],
   "outputs": [
     {
-      "name": "model",
+      "name": "outputDir",
       "type": "tensorflowModel",
-      "description": "Output data for the plugin"
+      "description": "Output directory data for the plugin"
     },
     {
-      "name": "tensorboard",
+      "name": "tensorboardDir",
       "type": "tensorboardLogs",
-      "description": "tensorboard Logs data for the plugin"
+      "description": "tensorboard directory for Logs data from the plugin"
     }
   ],
   "ui": [
@@ -246,6 +246,11 @@
       "description": "Whether or not to balance classes when sampling training data."
     },
     {
+      "key": "inputs.useIntensityScaling",
+      "title": "Scale intensities: ",
+      "description": "Whether or not to intensity-scale classes when sampling training data."
+    },
+    {
       "key": "inputs.useAugmentation",
       "title": "Use Data Augmentation: ",
       "description": "Whether or not to use data augmentation during training."
@@ -284,6 +289,12 @@
       "description": "The max size of a gaussian blur kernel used to blur the images [0 = None]. ",
       "condition": "model.inputs.useAugmentation=='YES'"
     },
+	{
+      "key": "inputs.augmentationIntensity",
+      "title": "Intensity Augmentation Severity: ",
+      "description": "The severity of intensity data augmentation [0 = None, 1 = 100% of the image dynamic range].",
+      "condition": "model.inputs.useAugmentation=='YES'"
+    },
     {
             "key" : "fieldsets",
             "fieldsets": [
@@ -309,7 +320,8 @@
                     "batchSize",
                     "learningRate",
                    "testEveryNSteps",
-                   "balanceClasses"
+                   "balanceClasses",
+				   "useIntensityScaling"
                   ]
                 },
                 {
@@ -321,7 +333,8 @@
                    "augmentationJitter",
                    "augmentationScale",
                    "augmentationNoise",
-                   "augmentationBlurMaxSigma"
+                   "augmentationBlurMaxSigma",
+				   "augmentationIntensity"
                   ]
                 }
             ]
