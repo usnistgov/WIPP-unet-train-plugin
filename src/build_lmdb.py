@@ -225,6 +225,8 @@ def build_database(image_folder, mask_folder, output_folder, dataset_name, train
     train_img_files = img_files[0:idx]
     test_img_files = img_files[idx:]
 
+    print('INFO: tile_size in build_databse:', tile_size)
+
     if tile_size == 0:
         print('building train database')
         train_database_name = 'train-{}.lmdb'.format(dataset_name)
@@ -235,14 +237,16 @@ def build_database(image_folder, mask_folder, output_folder, dataset_name, train
         generate_database(test_img_files, test_database_name, image_folder, mask_folder, output_folder)
 
     else:
+        print('INFO: check tile_size % size factor:', (tile_size % unet_model.UNet.SIZE_FACTOR) )
+
         assert tile_size % unet_model.UNet.SIZE_FACTOR == 0, 'UNet requires tiles with shapes that are multiples of 16'
         print('building train database')
         train_database_name = 'train-{}.lmdb'.format(dataset_name)
-        generate_database_tiling(train_img_files, train_database_name, image_folder, mask_folder, output_folder)
+        generate_database_tiling(train_img_files, train_database_name, image_folder, mask_folder, output_folder, tile_size)
 
         print('building test database')
         test_database_name = 'test-{}.lmdb'.format(dataset_name)
-        generate_database_tiling(test_img_files, test_database_name, image_folder, mask_folder, output_folder)
+        generate_database_tiling(test_img_files, test_database_name, image_folder, mask_folder, output_folder, tile_size)
 
     return train_database_name, test_database_name
 
