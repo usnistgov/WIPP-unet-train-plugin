@@ -29,7 +29,7 @@ gpu_devices = tf.config.experimental.list_physical_devices('GPU')
 for device in gpu_devices:
     tf.config.experimental.set_memory_growth(device, True)
 
-EARLY_STOPPING_COUNT = 10
+EARLY_STOPPING_COUNT = 50
 CONVERGENCE_TOLERANCE = 1e-4
 READER_COUNT = 1 # 1 per GPU, both the reader count and batch size will be scaled based on the number of GPUs
 
@@ -299,6 +299,8 @@ def main():
     with tempfile.TemporaryDirectory() as scratch_dir:
         if not use_tiling:
             tile_size = 0
+        print('INFO: tile_size before LMDB is built:', tile_size)
+
         train_database_name, test_database_name = build_lmdb.build_database(image_dir, mask_dir, scratch_dir, dataset_name, train_fraction, image_format, tile_size)
         train_lmdb_filepath = os.path.join(scratch_dir, train_database_name)
         test_lmdb_filepath = os.path.join(scratch_dir, test_database_name)
