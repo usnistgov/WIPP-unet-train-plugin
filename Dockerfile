@@ -23,8 +23,6 @@ RUN pip3 install lmdb scikit-image imagecodecs
 #Copy executable
 COPY src ${EXEC_DIR}/
 
-WORKDIR ${EXEC_DIR}
-
 # Default command. Additional arguments are provided through the command line
-ENTRYPOINT ["python3", "train_unet.py"]
+ENTRYPOINT ["python3", "/opt/executables/train_unet.py"]
 
