@@ -12,7 +12,7 @@ docker pull wipp/wipp-unet-cnn-train-plugin
 ```bash
 #!/bin/bash
 
-version=0.0.6
+version=0.0.8
 docker build . -t wipp/wipp-unet-cnn-train-plugin:latest
 docker build . -t wipp/wipp-unet-cnn-train-plugin:${version}
 ```

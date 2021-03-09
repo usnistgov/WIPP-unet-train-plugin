@@ -1,13 +1,13 @@
 {
   "name": "WIPP UNet CNN Training Plugin",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "title": "UNet CNN Training",
 "author": "Michael Majurski",
 "institution": "National Institute of Standards and Technology",
 "repository": "https://github.com/usnistgov/WIPP-unet-train-plugin",
 "citation": "Ronneberger, Olaf, Philipp Fischer, and Thomas Brox. \"U-net: Convolutional networks for biomedical image segmentation.\" International Conference on Medical image computing and computer-assisted intervention. Springer, Cham, 2015.",
   "description": "Train a UNet CNN model",
-  "containerId": "wipp/wipp-unet-cnn-train-plugin:0.0.7",
+  "containerId": "wipp/wipp-unet-cnn-train-plugin:0.0.8",
   "inputs": [
 
     {
