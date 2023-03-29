@@ -207,7 +207,7 @@ def apply_affine_transformation(I, orientation, reflect_x, reflect_y, jitter_x, 
 
 class ImageReader:
 
-    def __init__(self, img_db, use_intensity_scaling = False, use_augmentation=True, balance_classes=False, shuffle=True, num_workers=1, number_classes=2, augmentation_reflection=0, augmentation_rotation=0, augmentation_jitter=0, augmentation_noise=0, augmentation_scale=0, augmentation_blur_max_sigma=0, augmentation_intensity=0):
+    def __init__(self, img_db, use_intensity_scaling=False, use_augmentation=True, balance_classes=False, shuffle=True, num_workers=1, number_classes=2, augmentation_reflection=0, augmentation_rotation=0, augmentation_jitter=0, augmentation_noise=0, augmentation_scale=0, augmentation_blur_max_sigma=0, augmentation_intensity=0, tgt_image_size=None):
         random.seed()
 
         # copy inputs to class variables
@@ -218,6 +218,7 @@ class ImageReader:
         self.shuffle = shuffle
         self.nb_workers = num_workers
         self.nb_classes = number_classes
+        self.tgt_image_size = tgt_image_size
 
         self._reflection_flag = augmentation_reflection
         self._rotation_flag = augmentation_rotation
@@ -265,11 +266,17 @@ class ImageReader:
             datum.ParseFromString(cursor.value())
             # record the image size
             self.image_size = [datum.img_height, datum.img_width, datum.channels]
+            if self.tgt_image_size is not None:
+                # overwrite just the height and width, but not number of channels
+                self.image_size[0] = self.tgt_image_size[0]
+                self.image_size[1] = self.tgt_image_size[1]
 
             if self.image_size[0] % unet_model.UNet.SIZE_FACTOR != 0:
-                raise IOError('Input Image tile height needs to be a multiple of 16 to allow integer sized downscaled feature maps')
+                msg = 'Input Image tile height needs to be a multiple of 16 to allow integer sized downscaled feature maps. Found image of shape {}'.format(self.image_size)
+                raise IOError(msg)
             if self.image_size[1] % unet_model.UNet.SIZE_FACTOR != 0:
-                raise IOError('Input Image tile height needs to be a multiple of 16 to allow integer sized downscaled feature maps')
+                msg = 'Input Image tile width needs to be a multiple of 16 to allow integer sized downscaled feature maps. Found image of shape {}'.format(self.image_size)
+                raise IOError(msg)
 
             # iterate over the database getting the keys
             for key, val in cursor:
@@ -418,11 +425,39 @@ class ImageReader:
                                          intensity_augmentation_severity=self.intensity_augmentation_severity)
 
                 # format the image into a tensor
-                # reshape into tensor (CHW)
-                I = I.transpose((2, 0, 1))
                 I = I.astype(np.float32)
                 if self.use_intensity_scaling: # added for the concrete project
                     I = zscore_normalize(I)
+                pad_x = 0
+                pad_y = 0
+                if I.shape[0] != self.image_size[0]:
+                    pad_y = self.image_size[0] - I.shape[0]
+                if I.shape[1] < self.image_size[1]:
+                    pad_x = self.image_size[1] - I.shape[1]
+                if I.shape[0] > self.image_size[0] or I.shape[1] > self.image_size[1]:
+                    msg = "Encountered image tile larger than the expected size. Expected {}, Found {}".format(self.image_size, I.shape)
+                    raise RuntimeError(msg)
+
+                if pad_x > 0 or pad_y > 0:
+                    # pad image to the expected size
+                    # TODO test this
+                    paddings = tf.constant([[0, pad_y], [0, pad_x], [0, 0]])
+                    I = tf.pad(I, paddings, "CONSTANT", constant_values=0)
+                    paddings = tf.constant([[0, pad_y], [0, pad_x]])  # mask does not have channels dim
+                    M = tf.pad(M, paddings, "CONSTANT", constant_values=0)
+
+                    if I.shape[0] != self.image_size[0] or I.shape[1] != self.image_size[1]:
+                        msg = "Image after padding was incorrect shape. Expected {}, Found {}".format(
+                            self.image_size, I.shape)
+                        raise RuntimeError(msg)
+
+                if I.shape[0] != M.shape[0] or I.shape[1] != M.shape[1]:
+                    msg = "Image and Mask shapes do not align. Found Image Shape {}, Mask Shape {}".format(
+                        I.shape, M.shape)
+                    raise RuntimeError(msg)
+
+                # reshape into tensor (CHW)
+                I = I.transpose((2, 0, 1))
 
                 M = M.astype(np.int32)
                 # convert to a one-hot (HWC) representation

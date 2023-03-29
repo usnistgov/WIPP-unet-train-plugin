@@ -31,10 +31,10 @@ for device in gpu_devices:
 
 EARLY_STOPPING_COUNT = 50
 CONVERGENCE_TOLERANCE = 1e-4
-READER_COUNT = 1 # 1 per GPU, both the reader count and batch size will be scaled based on the number of GPUs
+READER_COUNT = 1  # 1 per GPU, both the reader count and batch size will be scaled based on the number of GPUs
 
 # use_intensity_scaling was added for the concrete project 2020-09-15
-def train_model(output_folder, tensorboard_dir, scratch_dir, batch_size, train_lmdb_filepath, test_lmdb_filepath, number_classes, balance_classes, learning_rate, test_every_n_steps, use_intensity_scaling, use_augmentation, augmentation_reflection, augmentation_rotation, augmentation_jitter, augmentation_noise, augmentation_scale, augmentation_blur_max_sigma, augmentation_intensity):
+def train_model(output_folder, tensorboard_dir, scratch_dir, batch_size, train_lmdb_filepath, test_lmdb_filepath, number_classes, balance_classes, learning_rate, test_every_n_steps, use_intensity_scaling, use_augmentation, augmentation_reflection, augmentation_rotation, augmentation_jitter, augmentation_noise, augmentation_scale, augmentation_blur_max_sigma, augmentation_intensity, largest_image_shape):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
@@ -50,11 +50,11 @@ def train_model(output_folder, tensorboard_dir, scratch_dir, batch_size, train_l
 
         # the flag use_intensity_scale was added for the concrete project
         print('Setting up test image reader')
-        test_reader = imagereader.ImageReader(test_lmdb_filepath, use_intensity_scaling=use_intensity_scaling, use_augmentation=False, shuffle=False, num_workers=reader_count, balance_classes=False, number_classes=number_classes)
+        test_reader = imagereader.ImageReader(test_lmdb_filepath, use_intensity_scaling=use_intensity_scaling, use_augmentation=False, shuffle=False, num_workers=reader_count, balance_classes=False, number_classes=number_classes, tgt_image_size=largest_image_shape)
         print('Test Reader has {} images'.format(test_reader.get_image_count()))
 
         print('Setting up training image reader')
-        train_reader = imagereader.ImageReader(train_lmdb_filepath, use_intensity_scaling=use_intensity_scaling, use_augmentation=use_augmentation, shuffle=True, num_workers=reader_count, balance_classes=balance_classes, number_classes=number_classes, augmentation_reflection=augmentation_reflection, augmentation_rotation=augmentation_rotation, augmentation_jitter=augmentation_jitter, augmentation_noise=augmentation_noise, augmentation_scale=augmentation_scale, augmentation_blur_max_sigma=augmentation_blur_max_sigma, augmentation_intensity=augmentation_intensity)
+        train_reader = imagereader.ImageReader(train_lmdb_filepath, use_intensity_scaling=use_intensity_scaling, use_augmentation=use_augmentation, shuffle=True, num_workers=reader_count, balance_classes=balance_classes, number_classes=number_classes, augmentation_reflection=augmentation_reflection, augmentation_rotation=augmentation_rotation, augmentation_jitter=augmentation_jitter, augmentation_noise=augmentation_noise, augmentation_scale=augmentation_scale, augmentation_blur_max_sigma=augmentation_blur_max_sigma, augmentation_intensity=augmentation_intensity, tgt_image_size=largest_image_shape)
         print('Train Reader has {} images'.format(train_reader.get_image_count()))
 
         try:  # if any errors happen we want to catch them and shut down the multiprocess readers
@@ -301,11 +301,11 @@ def main():
             tile_size = 0
         print('INFO: tile_size before LMDB is built:', tile_size)
 
-        train_database_name, test_database_name = build_lmdb.build_database(image_dir, mask_dir, scratch_dir, dataset_name, train_fraction, image_format, tile_size)
+        train_database_name, test_database_name, largest_image_shape = build_lmdb.build_database(image_dir, mask_dir, scratch_dir, dataset_name, train_fraction, image_format, tile_size)
         train_lmdb_filepath = os.path.join(scratch_dir, train_database_name)
         test_lmdb_filepath = os.path.join(scratch_dir, test_database_name)
 
-        train_model(output_dir, tensorboard_dir, scratch_dir, batch_size, train_lmdb_filepath, test_lmdb_filepath, number_classes, balance_classes, learning_rate, test_every_n_steps, use_intensity_scaling, use_augmentation, augmentation_reflection, augmentation_rotation, augmentation_jitter, augmentation_noise, augmentation_scale, augmentation_blur_max_sigma, augmentation_intensity)
+        train_model(output_dir, tensorboard_dir, scratch_dir, batch_size, train_lmdb_filepath, test_lmdb_filepath, number_classes, balance_classes, learning_rate, test_every_n_steps, use_intensity_scaling, use_augmentation, augmentation_reflection, augmentation_rotation, augmentation_jitter, augmentation_noise, augmentation_scale, augmentation_blur_max_sigma, augmentation_intensity, largest_image_shape)
 
 
 

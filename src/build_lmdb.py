@@ -107,6 +107,10 @@ def process_slide_tiling(img, msk, tile_size):
                 y_st = y_st + dy
                 y_end = y_end + dy
 
+            # handle if the image is smaller than the tile size
+            x_st = max(0, x_st)
+            y_st = max(0, y_st)
+
             # crop out the tile
             img_pixels = img[y_st:y_end, x_st:x_end]
             msk_pixels = msk[y_st:y_end, x_st:x_end]
@@ -175,6 +179,8 @@ def generate_database(img_list, database_name, image_filepath, mask_filepath, ou
         for fn in img_list:
             csvfile.write(fn + '\n')
 
+    largest_height = 0
+    largest_width = 0
     for i in range(len(img_list)):
         txn_nb = 0
         img_file_name = img_list[i]
@@ -185,6 +191,8 @@ def generate_database(img_list, database_name, image_filepath, mask_filepath, ou
         msk = msk.astype(np.uint8)
         assert img.shape[0] == msk.shape[0], 'Image and Mask must be the same Height'
         assert img.shape[1] == msk.shape[1], 'Image and Mask must be the same Width'
+        largest_height = max(largest_height, img.shape[0])
+        largest_width = max(largest_width, img.shape[1])
 
         img = enforce_size_multiple(img)
         msk = enforce_size_multiple(msk)
@@ -199,6 +207,7 @@ def generate_database(img_list, database_name, image_filepath, mask_filepath, ou
 
     image_txn.commit()
     image_env.close()
+    return largest_height, largest_width
 
 
 def build_database(image_folder, mask_folder, output_folder, dataset_name, train_fraction, image_format, tile_size):
@@ -230,11 +239,13 @@ def build_database(image_folder, mask_folder, output_folder, dataset_name, train
     if tile_size == 0:
         print('building train database')
         train_database_name = 'train-{}.lmdb'.format(dataset_name)
-        generate_database(train_img_files, train_database_name, image_folder, mask_folder, output_folder)
+        largest_height, largest_width = generate_database(train_img_files, train_database_name, image_folder, mask_folder, output_folder)
 
         print('building test database')
         test_database_name = 'test-{}.lmdb'.format(dataset_name)
-        generate_database(test_img_files, test_database_name, image_folder, mask_folder, output_folder)
+        largest_height2, largest_width2 = generate_database(test_img_files, test_database_name, image_folder, mask_folder, output_folder)
+        largest_height = max(largest_height, largest_height2)
+        largest_width = max(largest_width, largest_width2)
 
     else:
         print('INFO: check tile_size % size factor:', (tile_size % unet_model.UNet.SIZE_FACTOR) )
@@ -247,8 +258,10 @@ def build_database(image_folder, mask_folder, output_folder, dataset_name, train
         print('building test database')
         test_database_name = 'test-{}.lmdb'.format(dataset_name)
         generate_database_tiling(test_img_files, test_database_name, image_folder, mask_folder, output_folder, tile_size)
+        largest_height = tile_size
+        largest_width = tile_size
 
-    return train_database_name, test_database_name
+    return train_database_name, test_database_name, [largest_height, largest_width]
 
 
 def main():
@@ -275,9 +288,7 @@ def main():
     image_format = args.image_format
     tile_size = args.tile_size
 
-    print('test:', image_folder)
-
-    build_database(image_folder, mask_folder, output_folder, dataset_name, train_fraction, image_format, tile_size)
+    train_database_name, test_database_name, largest_image_shape = build_database(image_folder, mask_folder, output_folder, dataset_name, train_fraction, image_format, tile_size)
 
 if __name__ == "__main__":
     main()
