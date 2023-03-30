@@ -426,8 +426,9 @@ class ImageReader:
 
                 # format the image into a tensor
                 I = I.astype(np.float32)
-                if self.use_intensity_scaling: # added for the concrete project
+                if self.use_intensity_scaling:  # added for the concrete project
                     I = zscore_normalize(I)
+
                 pad_x = 0
                 pad_y = 0
                 if I.shape[0] != self.image_size[0]:
@@ -440,11 +441,15 @@ class ImageReader:
 
                 if pad_x > 0 or pad_y > 0:
                     # pad image to the expected size
-                    # TODO test this
-                    paddings = tf.constant([[0, pad_y], [0, pad_x], [0, 0]])
-                    I = tf.pad(I, paddings, "CONSTANT", constant_values=0)
-                    paddings = tf.constant([[0, pad_y], [0, pad_x]])  # mask does not have channels dim
-                    M = tf.pad(M, paddings, "CONSTANT", constant_values=0)
+                    if self.use_intensity_scaling:
+                        I = np.pad(I, [[0, pad_y], [0, pad_x], [0, 0]], mode='constant', constant_values=0)
+                    else:
+                        I = np.pad(I, [[0, pad_y], [0, pad_x], [0, 0]], mode='mean')
+
+                    if self.use_intensity_scaling:
+                        M = np.pad(M, [[0, pad_y], [0, pad_x]], mode='constant', constant_values=0)
+                    else:
+                        M = np.pad(M, [[0, pad_y], [0, pad_x]], mode='mean')
 
                     if I.shape[0] != self.image_size[0] or I.shape[1] != self.image_size[1]:
                         msg = "Image after padding was incorrect shape. Expected {}, Found {}".format(

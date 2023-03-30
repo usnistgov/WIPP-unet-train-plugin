@@ -25,155 +25,148 @@ import imagereader
 import build_lmdb
 import tempfile
 
-gpu_devices = tf.config.experimental.list_physical_devices('GPU')
+gpu_devices = tf.config.list_physical_devices('GPU')
 for device in gpu_devices:
     tf.config.experimental.set_memory_growth(device, True)
 
-EARLY_STOPPING_COUNT = 50
-CONVERGENCE_TOLERANCE = 1e-4
 READER_COUNT = 1  # 1 per GPU, both the reader count and batch size will be scaled based on the number of GPUs
 
 # use_intensity_scaling was added for the concrete project 2020-09-15
-def train_model(output_folder, tensorboard_dir, scratch_dir, batch_size, train_lmdb_filepath, test_lmdb_filepath, number_classes, balance_classes, learning_rate, test_every_n_steps, use_intensity_scaling, use_augmentation, augmentation_reflection, augmentation_rotation, augmentation_jitter, augmentation_noise, augmentation_scale, augmentation_blur_max_sigma, augmentation_intensity, largest_image_shape):
+def train_model(output_folder, tensorboard_dir, scratch_dir, batch_size, train_lmdb_filepath, test_lmdb_filepath, number_classes, balance_classes, learning_rate, test_every_n_steps, use_intensity_scaling, use_augmentation, augmentation_reflection, augmentation_rotation, augmentation_jitter, augmentation_noise, augmentation_scale, augmentation_blur_max_sigma, augmentation_intensity, largest_image_shape, early_stopping_epoch_count, convergence_tolerance):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
     training_checkpoint_filepath = None
 
-    # use all available devices
-    mirrored_strategy = tf.distribute.MirroredStrategy()
-    with mirrored_strategy.scope():
+    # scale the number of I/O readers based on the GPU count
+    reader_count = READER_COUNT
 
-        global_batch_size = batch_size * mirrored_strategy.num_replicas_in_sync
-        # scale the number of I/O readers based on the GPU count
-        reader_count = READER_COUNT * mirrored_strategy.num_replicas_in_sync
+    # the flag use_intensity_scale was added for the concrete project
+    print('Setting up test image reader')
+    test_reader = imagereader.ImageReader(test_lmdb_filepath, use_intensity_scaling=use_intensity_scaling, use_augmentation=False, shuffle=False, num_workers=reader_count, balance_classes=False, number_classes=number_classes, tgt_image_size=largest_image_shape)
+    print('Test Reader has {} images'.format(test_reader.get_image_count()))
 
-        # the flag use_intensity_scale was added for the concrete project
-        print('Setting up test image reader')
-        test_reader = imagereader.ImageReader(test_lmdb_filepath, use_intensity_scaling=use_intensity_scaling, use_augmentation=False, shuffle=False, num_workers=reader_count, balance_classes=False, number_classes=number_classes, tgt_image_size=largest_image_shape)
-        print('Test Reader has {} images'.format(test_reader.get_image_count()))
+    print('Setting up training image reader')
+    train_reader = imagereader.ImageReader(train_lmdb_filepath, use_intensity_scaling=use_intensity_scaling, use_augmentation=use_augmentation, shuffle=True, num_workers=reader_count, balance_classes=balance_classes, number_classes=number_classes, augmentation_reflection=augmentation_reflection, augmentation_rotation=augmentation_rotation, augmentation_jitter=augmentation_jitter, augmentation_noise=augmentation_noise, augmentation_scale=augmentation_scale, augmentation_blur_max_sigma=augmentation_blur_max_sigma, augmentation_intensity=augmentation_intensity, tgt_image_size=largest_image_shape)
+    print('Train Reader has {} images'.format(train_reader.get_image_count()))
 
-        print('Setting up training image reader')
-        train_reader = imagereader.ImageReader(train_lmdb_filepath, use_intensity_scaling=use_intensity_scaling, use_augmentation=use_augmentation, shuffle=True, num_workers=reader_count, balance_classes=balance_classes, number_classes=number_classes, augmentation_reflection=augmentation_reflection, augmentation_rotation=augmentation_rotation, augmentation_jitter=augmentation_jitter, augmentation_noise=augmentation_noise, augmentation_scale=augmentation_scale, augmentation_blur_max_sigma=augmentation_blur_max_sigma, augmentation_intensity=augmentation_intensity, tgt_image_size=largest_image_shape)
-        print('Train Reader has {} images'.format(train_reader.get_image_count()))
+    try:  # if any errors happen we want to catch them and shut down the multiprocess readers
+        print('Starting Readers')
+        train_reader.startup()
+        test_reader.startup()
 
-        try:  # if any errors happen we want to catch them and shut down the multiprocess readers
-            print('Starting Readers')
-            train_reader.startup()
-            test_reader.startup()
+        train_dataset = train_reader.get_tf_dataset()
+        train_dataset = train_dataset.batch(batch_size).prefetch(reader_count)
+        # train_dataset = mirrored_strategy.experimental_distribute_dataset(train_dataset)
 
-            train_dataset = train_reader.get_tf_dataset()
-            train_dataset = train_dataset.batch(global_batch_size).prefetch(reader_count)
-            train_dataset = mirrored_strategy.experimental_distribute_dataset(train_dataset)
+        test_dataset = test_reader.get_tf_dataset()
+        test_dataset = test_dataset.batch(batch_size).prefetch(reader_count)
+        # test_dataset = mirrored_strategy.experimental_distribute_dataset(test_dataset)
 
-            test_dataset = test_reader.get_tf_dataset()
-            test_dataset = test_dataset.batch(global_batch_size).prefetch(reader_count)
-            test_dataset = mirrored_strategy.experimental_distribute_dataset(test_dataset)
+        print('Creating model')
+        model = unet_model.UNet(number_classes, batch_size, train_reader.get_image_size(), learning_rate)
 
-            print('Creating model')
-            model = unet_model.UNet(number_classes, global_batch_size, train_reader.get_image_size(), learning_rate)
+        checkpoint = tf.train.Checkpoint(optimizer=model.get_optimizer(), model=model.get_keras_model())
 
-            checkpoint = tf.train.Checkpoint(optimizer=model.get_optimizer(), model=model.get_keras_model())
+        # train_epoch_size = train_reader.get_image_count()/batch_size
+        train_epoch_size = test_every_n_steps
+        test_epoch_size = test_reader.get_image_count() / batch_size
 
-            # train_epoch_size = train_reader.get_image_count()/batch_size
-            train_epoch_size = test_every_n_steps
-            test_epoch_size = test_reader.get_image_count() / batch_size
+        test_loss = list()
 
-            test_loss = list()
+        # Prepare the metrics.
+        train_loss_metric = tf.keras.metrics.Mean('train_loss', dtype=tf.float32)
+        train_acc_metric = tf.keras.metrics.CategoricalAccuracy('train_accuracy')
+        test_loss_metric = tf.keras.metrics.Mean('test_loss', dtype=tf.float32)
+        test_acc_metric = tf.keras.metrics.CategoricalAccuracy('test_accuracy')
 
-            # Prepare the metrics.
-            train_loss_metric = tf.keras.metrics.Mean('train_loss', dtype=tf.float32)
-            train_acc_metric = tf.keras.metrics.CategoricalAccuracy('train_accuracy')
-            test_loss_metric = tf.keras.metrics.Mean('test_loss', dtype=tf.float32)
-            test_acc_metric = tf.keras.metrics.CategoricalAccuracy('test_accuracy')
+        train_log_dir = os.path.join(tensorboard_dir,'train')
+        if not os.path.exists(train_log_dir):
+            os.makedirs(train_log_dir)
+        test_log_dir = os.path.join(tensorboard_dir,'test')
+        if not os.path.exists(test_log_dir):
+            os.makedirs(test_log_dir)
 
-            train_log_dir = os.path.join(tensorboard_dir,'train')
-            if not os.path.exists(train_log_dir):
-                os.makedirs(train_log_dir)
-            test_log_dir = os.path.join(tensorboard_dir,'test')
-            if not os.path.exists(test_log_dir):
-                os.makedirs(test_log_dir)
+        train_summary_writer = tf.summary.create_file_writer(train_log_dir)
+        test_summary_writer = tf.summary.create_file_writer(test_log_dir)
 
-            train_summary_writer = tf.summary.create_file_writer(train_log_dir)
-            test_summary_writer = tf.summary.create_file_writer(test_log_dir)
+        epoch = 0
+        print('Running Network')
+        while True:  # loop until early stopping
+            print('---- Epoch: {} ----'.format(epoch))
 
-            epoch = 0
-            print('Running Network')
-            while True:  # loop until early stopping
-                print('---- Epoch: {} ----'.format(epoch))
+            if epoch == 0:
+                cur_train_epoch_size = min(1000, train_epoch_size)
+                print('Performing Adam Optimizer learning rate warmup for {} steps'.format(cur_train_epoch_size))
+                model.set_learning_rate(learning_rate / 10)
+            else:
+                cur_train_epoch_size = train_epoch_size
+                model.set_learning_rate(learning_rate)
 
-                if epoch == 0:
-                    cur_train_epoch_size = min(1000, train_epoch_size)
-                    print('Performing Adam Optimizer learning rate warmup for {} steps'.format(cur_train_epoch_size))
-                    model.set_learning_rate(learning_rate / 10)
-                else:
-                    cur_train_epoch_size = train_epoch_size
-                    model.set_learning_rate(learning_rate)
+            # Iterate over the batches of the train dataset.
+            for step, (batch_images, batch_labels) in enumerate(train_dataset):
+                if step > cur_train_epoch_size:
+                    break
 
-                # Iterate over the batches of the train dataset.
-                for step, (batch_images, batch_labels) in enumerate(train_dataset):
-                    if step > cur_train_epoch_size:
-                        break
+                inputs = (batch_images, batch_labels, train_loss_metric, train_acc_metric)
+                model.train_step(inputs)
 
-                    inputs = (batch_images, batch_labels, train_loss_metric, train_acc_metric)
-                    model.dist_train_step(mirrored_strategy, inputs)
+                # print('Train Epoch {}: Batch {}/{}: Loss {} Accuracy = {}'.format(epoch, step, train_epoch_size, train_loss_metric.result(), train_acc_metric.result()))
+                with train_summary_writer.as_default():
+                    tf.summary.scalar('loss', train_loss_metric.result(), step=int(epoch * train_epoch_size + step))
+                    tf.summary.scalar('accuracy', train_acc_metric.result(), step=int(epoch * train_epoch_size + step))
+                train_loss_metric.reset_states()
+                train_acc_metric.reset_states()
 
-                    # print('Train Epoch {}: Batch {}/{}: Loss {} Accuracy = {}'.format(epoch, step, train_epoch_size, train_loss_metric.result(), train_acc_metric.result()))
-                    with train_summary_writer.as_default():
-                        tf.summary.scalar('loss', train_loss_metric.result(), step=int(epoch * train_epoch_size + step))
-                        tf.summary.scalar('accuracy', train_acc_metric.result(), step=int(epoch * train_epoch_size + step))
-                    train_loss_metric.reset_states()
-                    train_acc_metric.reset_states()
+            # Iterate over the batches of the test dataset.
+            epoch_test_loss = list()
+            for step, (batch_images, batch_labels) in enumerate(test_dataset):
+                if step > test_epoch_size:
+                    break
 
-                # Iterate over the batches of the test dataset.
-                epoch_test_loss = list()
-                for step, (batch_images, batch_labels) in enumerate(test_dataset):
-                    if step > test_epoch_size:
-                        break
+                inputs = (batch_images, batch_labels, test_loss_metric, test_acc_metric)
+                loss_value = model.test_step(inputs)
 
-                    inputs = (batch_images, batch_labels, test_loss_metric, test_acc_metric)
-                    loss_value = model.dist_test_step(mirrored_strategy, inputs)
+                epoch_test_loss.append(loss_value.numpy())
+                # print('Test Epoch {}: Batch {}/{}: Loss {}'.format(epoch, step, test_epoch_size, loss_value))
+            test_loss.append(np.mean(epoch_test_loss))
 
-                    epoch_test_loss.append(loss_value.numpy())
-                    # print('Test Epoch {}: Batch {}/{}: Loss {}'.format(epoch, step, test_epoch_size, loss_value))
-                test_loss.append(np.mean(epoch_test_loss))
+            print('Test Epoch: {}: Loss = {} Accuracy = {}'.format(epoch, test_loss_metric.result(), test_acc_metric.result()))
+            with test_summary_writer.as_default():
+                tf.summary.scalar('loss', test_loss_metric.result(), step=int((epoch+1) * train_epoch_size))
+                tf.summary.scalar('accuracy', test_acc_metric.result(), step=int((epoch+1) * train_epoch_size))
+            test_loss_metric.reset_states()
+            test_acc_metric.reset_states()
 
-                print('Test Epoch: {}: Loss = {} Accuracy = {}'.format(epoch, test_loss_metric.result(), test_acc_metric.result()))
-                with test_summary_writer.as_default():
-                    tf.summary.scalar('loss', test_loss_metric.result(), step=int((epoch+1) * train_epoch_size))
-                    tf.summary.scalar('accuracy', test_acc_metric.result(), step=int((epoch+1) * train_epoch_size))
-                test_loss_metric.reset_states()
-                test_acc_metric.reset_states()
+            # determine if to record a new checkpoint based on best test loss
+            if (len(test_loss) - 1) == np.argmin(test_loss):
+                # save tf checkpoint
+                print('Test loss improved: {}, saving checkpoint'.format(np.min(test_loss)))
+                training_checkpoint_filepath = checkpoint.write(os.path.join(scratch_dir, "ckpt"))
 
-                # determine if to record a new checkpoint based on best test loss
-                if (len(test_loss) - 1) == np.argmin(test_loss):
-                    # save tf checkpoint
-                    print('Test loss improved: {}, saving checkpoint'.format(np.min(test_loss)))
-                    training_checkpoint_filepath = checkpoint.write(os.path.join(scratch_dir, "ckpt"))
+            # determine early stopping
+            print('Best Current Epoch Selection:')
+            print('Test Loss:')
+            print(test_loss)
+            min_test_loss = np.min(test_loss)
+            error_from_best = np.abs(test_loss - min_test_loss)
+            error_from_best[error_from_best < convergence_tolerance] = 0
+            best_epoch = np.where(error_from_best == 0)[0][0] # unpack numpy array, select first time since that value has happened
+            print('Best epoch: {}'.format(best_epoch))
 
-                # determine early stopping
-                print('Best Current Epoch Selection:')
-                print('Test Loss:')
-                print(test_loss)
-                min_test_loss = np.min(test_loss)
-                error_from_best = np.abs(test_loss - min_test_loss)
-                error_from_best[error_from_best < CONVERGENCE_TOLERANCE] = 0
-                best_epoch = np.where(error_from_best == 0)[0][0] # unpack numpy array, select first time since that value has happened
-                print('Best epoch: {}'.format(best_epoch))
+            if len(test_loss) - best_epoch > early_stopping_epoch_count:
+                break  # break the epoch loop
+            epoch = epoch + 1
 
-                if len(test_loss) - best_epoch > EARLY_STOPPING_COUNT:
-                    break  # break the epoch loop
-                epoch = epoch + 1
-
-        finally: # if any errors happened during training, shut down the disk readers
-            print('Shutting down train_reader')
-            train_reader.shutdown()
-            print('Shutting down test_reader')
-            test_reader.shutdown()
+    finally:  # if any errors happened during training, shut down the disk readers
+        print('Shutting down train_reader')
+        train_reader.shutdown()
+        print('Shutting down test_reader')
+        test_reader.shutdown()
 
     if training_checkpoint_filepath is not None:
         # restore the checkpoint and generate a saved model
-        model = unet_model.UNet(number_classes, global_batch_size, train_reader.get_image_size(), learning_rate)
+        model = unet_model.UNet(number_classes, batch_size, train_reader.get_image_size(), learning_rate)
         checkpoint = tf.train.Checkpoint(optimizer=model.get_optimizer(), model=model.get_keras_model())
         checkpoint.restore(training_checkpoint_filepath)
         tf.saved_model.save(model.get_keras_model(), output_folder)
@@ -201,6 +194,8 @@ def main():
     parser.add_argument('--tensorboardDir', dest='tensorboard_dir', type=str, help='Folder where tensorboard logs  will be saved (Required)', required=True)
     parser.add_argument('--testEveryNSteps', dest='test_every_n_steps', type=int, help='number of gradient update steps to take between test epochs', default=1000)
     parser.add_argument('--balanceClasses', dest='balance_classes', type=str, help='whether to balance classes [YES, NO]', default="NO")
+    parser.add_argument('--earlyStoppingEpochCount', dest='early_stopping_epoch_count', type=int, help='number of epochs past optimal before the optimizer terminates.', default=20)
+    parser.add_argument('--convergenceTolerance', dest='convergence_tolerance', type=float, help='eps defining buffer for early stopping termination tracking.', default=1e-4)
 
     # Augmentation parameters
     parser.add_argument('--useAugmentation', dest='use_augmentation', type=str, help='whether to use data augmentation [YES, NO]', default="NO")
@@ -232,12 +227,11 @@ def main():
     mask_dir = args.mask_dir
     train_fraction = args.train_fraction
 
-
     print('use_tiling = {}'.format(use_tiling))
     print('tile_size = {}'.format(tile_size))
     print('image_dir = {}'.format(image_dir))
     print('mask_dir = {}'.format(mask_dir))
-    print('train_fraction = []'.format(train_fraction))
+    print('train_fraction = {}'.format(train_fraction))
     print('use_intensity_scaling = {}'.format(use_intensity_scaling))
 
     # Training parameters
@@ -250,6 +244,8 @@ def main():
     test_every_n_steps = args.test_every_n_steps
     balance_classes = args.balance_classes
     balance_classes = balance_classes.upper() == "YES"
+    early_stopping_epoch_count = args.early_stopping_epoch_count
+    convergence_tolerance = args.convergence_tolerance
 
     print('batch_size = {}'.format(batch_size))
     print('number_classes = {}'.format(number_classes))
@@ -258,6 +254,8 @@ def main():
     print('balance_classes = {}'.format(balance_classes))
     print('output_dir = {}'.format(output_dir))
     print('tensorboard_dir = {}'.format(tensorboard_dir))
+    print('early_stopping_epoch_count = {}'.format(early_stopping_epoch_count))
+    print('convergence_tolerance = {}'.format(convergence_tolerance))
 
     # Augmentation parameters
     use_augmentation = args.use_augmentation
@@ -293,7 +291,7 @@ def main():
         augmentation_intensity = 0
 
     dataset_name = 'unet'
-    image_format = 'tif'
+    image_format = 'png'  # TODO revert 'tif'
 
     # create the scratch directory so that it gets self cleaned up after with block
     with tempfile.TemporaryDirectory() as scratch_dir:
@@ -305,7 +303,7 @@ def main():
         train_lmdb_filepath = os.path.join(scratch_dir, train_database_name)
         test_lmdb_filepath = os.path.join(scratch_dir, test_database_name)
 
-        train_model(output_dir, tensorboard_dir, scratch_dir, batch_size, train_lmdb_filepath, test_lmdb_filepath, number_classes, balance_classes, learning_rate, test_every_n_steps, use_intensity_scaling, use_augmentation, augmentation_reflection, augmentation_rotation, augmentation_jitter, augmentation_noise, augmentation_scale, augmentation_blur_max_sigma, augmentation_intensity, largest_image_shape)
+        train_model(output_dir, tensorboard_dir, scratch_dir, batch_size, train_lmdb_filepath, test_lmdb_filepath, number_classes, balance_classes, learning_rate, test_every_n_steps, use_intensity_scaling, use_augmentation, augmentation_reflection, augmentation_rotation, augmentation_jitter, augmentation_noise, augmentation_scale, augmentation_blur_max_sigma, augmentation_intensity, largest_image_shape, early_stopping_epoch_count, convergence_tolerance)
 
 
 

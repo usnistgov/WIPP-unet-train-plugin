@@ -95,6 +95,20 @@
       "required": true,
       "default": "YES"
     },
+    {
+      "name": "earlyStoppingEpochCount",
+      "type": "number",
+      "description": "The number of epochs past the optimal model to continue to train, hoping to find an improvement.",
+      "required": true,
+      "default": 20
+    },
+    {
+      "name": "convergenceTolerance",
+      "type": "number",
+      "description": "The epsilon buffer used to determine equivalence with early stopping metrics values. If two values differ by less than convergenceTolerance, they are considered equal. This value prevents machine precision improvements in loss from allowing the model to continue training.",
+      "required": true,
+      "default": 1e-4
+    },
       {
       "name": "useIntensityScaling",
       "type": "enum",

@@ -226,6 +226,9 @@ def build_database(image_folder, mask_folder, output_folder, dataset_name, train
     img_files = [f for f in os.listdir(mask_folder) if f.endswith('.{}'.format(image_format))]
 
     print('len(img_files)', len(img_files))
+    if len(img_files) == 0:
+        msg = "Found no image files with the provided image format {}".format(image_format)
+        raise RuntimeError(msg)
 
     # in place shuffle
     random.shuffle(img_files)
@@ -235,6 +238,10 @@ def build_database(image_folder, mask_folder, output_folder, dataset_name, train
     test_img_files = img_files[idx:]
 
     print('INFO: tile_size in build_databse:', tile_size)
+    if len(train_img_files) == 0:
+        raise RuntimeError("Train dataset contains 0 images.")
+    if len(test_img_files) == 0:
+        raise RuntimeError("Test dataset contains 0 images.")
 
     if tile_size == 0:
         print('building train database')

@@ -176,19 +176,12 @@ class UNet():
 
         return loss_value
 
-    @tf.function
-    def dist_train_step(self, dist_strategy, inputs):
-        per_gpu_loss = dist_strategy.experimental_run_v2(self.train_step, args=(inputs,))
-        loss_value = dist_strategy.reduce(tf.distribute.ReduceOp.SUM, per_gpu_loss, axis=None)
-
-        return loss_value
-
     def test_step(self, inputs):
         (images, labels, loss_metric, accuracy_metric) = inputs
         softmax = self.model(images, training=False)
 
         loss_value = self.loss_fn(labels, softmax)
-        # average across the batch (N) with the approprite global batch size
+        # average across the batch (N) with the appropriate global batch size
         loss_value = tf.reduce_sum(loss_value, axis=0) / self.global_batch_size
         # reduce down to a scalar (reduce H, W)
         loss_value = tf.reduce_mean(loss_value)
@@ -197,10 +190,3 @@ class UNet():
         accuracy_metric.update_state(labels, softmax)
 
         return loss_value
-
-    @tf.function
-    def dist_test_step(self, dist_strategy, inputs):
-        per_gpu_loss = dist_strategy.experimental_run_v2(self.test_step, args=(inputs,))
-        loss_value = dist_strategy.reduce(tf.distribute.ReduceOp.SUM, per_gpu_loss, axis=None)
-        return loss_value
-

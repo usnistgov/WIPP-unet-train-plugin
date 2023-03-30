@@ -12,7 +12,7 @@ docker pull wipp/wipp-unet-cnn-train-plugin
 ```bash
 #!/bin/bash
 
-version=0.0.8
+version=1.0.0
 docker build . -t wipp/wipp-unet-cnn-train-plugin:latest
 docker build . -t wipp/wipp-unet-cnn-train-plugin:${version}
 ```
@@ -40,7 +40,7 @@ usage: train_unet [-h] --imageDir IMAGE_DIR --maskDir MASK_DIR
                   [--trainFraction TRAIN_FRACTION] [--batchSize BATCH_SIZE]
                   [--numberClasses NUMBER_CLASSES]
                   [--learningRate LEARNING_RATE] --outputDir OUTPUT_DIR
-                  --tensorboardDir TENSORBOARD_DIR
+                  [--tensorboardDir TENSORBOARD_DIR]
                   [--testEveryNSteps TEST_EVERY_N_STEPS]
                   [--balanceClasses BALANCE_CLASSES]
                   [--useIntensityScaling USE_INTENSITY_SCALING] 
