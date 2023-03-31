@@ -1,13 +1,13 @@
 {
   "name": "WIPP UNet CNN Training Plugin",
-  "version": "0.0.8",
+  "version": "1.0.0",
   "title": "UNet CNN Training",
-"author": "Michael Majurski",
-"institution": "National Institute of Standards and Technology",
-"repository": "https://github.com/usnistgov/WIPP-unet-train-plugin",
-"citation": "Ronneberger, Olaf, Philipp Fischer, and Thomas Brox. \"U-net: Convolutional networks for biomedical image segmentation.\" International Conference on Medical image computing and computer-assisted intervention. Springer, Cham, 2015.",
+  "author": "Michael Majurski",
+  "institution": "National Institute of Standards and Technology",
+  "repository": "https://github.com/usnistgov/WIPP-unet-train-plugin",
+  "citation": "Ronneberger, Olaf, Philipp Fischer, and Thomas Brox. \"U-net: Convolutional networks for biomedical image segmentation.\" International Conference on Medical image computing and computer-assisted intervention. Springer, Cham, 2015.",
   "description": "Train a UNet CNN model",
-  "containerId": "wipp/wipp-unet-cnn-train-plugin:0.0.8",
+  "containerId": "wipp/wipp-unet-cnn-train-plugin:1.0.0",
   "inputs": [
 
     {
@@ -260,6 +260,16 @@
       "description": "Whether or not to balance classes when sampling training data."
     },
     {
+      "key": "inputs.earlyStoppingEpochCount",
+      "title": "Early Stopping Epoch Count: ",
+      "description": "The number of epochs past the optimal model to continue to train, hoping to find an improvement."
+    },
+    {
+      "key": "inputs.convergenceTolerance",
+      "title": "Counvergence Tolerance: ",
+      "description": "The epsilon buffer used to determine equivalence with early stopping metrics values."
+    },
+    {
       "key": "inputs.useIntensityScaling",
       "title": "Scale intensities: ",
       "description": "Whether or not to intensity-scale classes when sampling training data."
@@ -333,9 +343,11 @@
                     "trainFraction",
                     "batchSize",
                     "learningRate",
-                   "testEveryNSteps",
-                   "balanceClasses",
-				   "useIntensityScaling"
+                    "testEveryNSteps",
+                    "balanceClasses",
+                    "earlyStoppingEpochCount",
+                    "convergenceTolerance",
+                    "useIntensityScaling"
                   ]
                 },
                 {
@@ -344,11 +356,11 @@
                     "useAugmentation",
                     "augmentationRotation",
                     "augmentationReflection",
-                   "augmentationJitter",
-                   "augmentationScale",
-                   "augmentationNoise",
-                   "augmentationBlurMaxSigma",
-				   "augmentationIntensity"
+                    "augmentationJitter",
+                    "augmentationScale",
+                    "augmentationNoise",
+                    "augmentationBlurMaxSigma",
+                    "augmentationIntensity"
                   ]
                 }
             ]
