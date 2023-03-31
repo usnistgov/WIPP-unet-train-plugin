@@ -291,7 +291,7 @@ def main():
         augmentation_intensity = 0
 
     dataset_name = 'unet'
-    image_format = 'png'  # TODO revert 'tif'
+    image_format = 'tif'
 
     # create the scratch directory so that it gets self cleaned up after with block
     with tempfile.TemporaryDirectory() as scratch_dir:
